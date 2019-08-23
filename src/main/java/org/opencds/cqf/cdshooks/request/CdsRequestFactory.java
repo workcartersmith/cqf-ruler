@@ -37,6 +37,10 @@ public class CdsRequestFactory {
                     return new PatientViewRequest(requestJson);
                 case "medication-prescribe":
                     return new MedicationPrescribeRequest(requestJson);
+		case "order-sign":
+                    return new OrderSignRequest(requestJson);
+	        case "order-select":
+                    return new OrderSelectRequest(requestJson);
                 case "order-review":
                     return new OrderReviewRequest(requestJson);
                 default:
