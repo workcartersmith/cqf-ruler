@@ -258,6 +258,20 @@ public class BaseServlet extends RestfulServer
         }
 
         register(endpointProvider, provider.getCollectionProviders());
+
+        // QuestionnaireResponse processing
+        FHIRQuestionnaireResponseProvider questionnaireResponseProvider = new FHIRQuestionnaireResponseProvider(provider);
+        QuestionnaireResponseResourceProvider jpaQuestionnaireResponseProvider = (QuestionnaireResponseResourceProvider) provider.resolveResourceProvider("QuestionnaireResponse");
+        questionnaireResponseProvider.setDao(jpaQuestionnaireResponseProvider.getDao());
+        questionnaireResponseProvider.setContext(jpaQuestionnaireResponseProvider.getContext());
+
+        try {
+            unregister(jpaQuestionnaireResponseProvider, provider.getCollectionProviders());
+        } catch (Exception e) {
+            throw new ServletException("Unable to unregister provider: " + e.getMessage());
+        }
+
+        register(questionnaireResponseProvider, provider.getCollectionProviders());
     }
 
     private void register(IResourceProvider provider, Collection<IResourceProvider> providers) {

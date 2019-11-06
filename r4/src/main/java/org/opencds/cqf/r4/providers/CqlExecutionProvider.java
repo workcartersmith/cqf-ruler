@@ -105,7 +105,7 @@ public class CqlExecutionProvider {
         return cleanReferences(references);
     }
 
-    private String buildIncludes(Iterable<CanonicalType> references) {
+    private String buildIncludes(Iterable<CanonicalType> references, String libraryName) {
         StringBuilder builder = new StringBuilder();
         for (CanonicalType reference : references) {
 
@@ -115,18 +115,21 @@ public class CqlExecutionProvider {
 
             builder.append("include ");
 
-            // TODO: This assumes the libraries resource id is the same as the library name,
-            // need to work this out better
-            builder.append(reference.getId());
+            if (libraryName == null) {
+                String[] canonicalSplit = reference.getValueAsString().split("/");
+                libraryName = canonicalSplit[canonicalSplit.length - 1].split("\\|")[0];
+            }
 
-            if (reference.hasValue() && reference.getValue().split("\\|").length > 1) {
+            builder.append(libraryName);
+
+            if (reference.hasValue() && reference.getValueAsString().split("\\|").length > 1) {
                 builder.append(" version '");
-                builder.append(reference.getValue().split("\\|")[1]);
+                builder.append(reference.getValueAsString().split("\\|")[1]);
                 builder.append("'");
             }
 
             builder.append(" called ");
-            builder.append(reference.getValue().split("\\|")[0]);
+            builder.append(libraryName);
         }
 
         return builder.toString();
@@ -140,13 +143,16 @@ public class CqlExecutionProvider {
     public Object evaluateInContext(DomainResource instance, String cql, String patientId) {
         Iterable<CanonicalType> libraries = getLibraryReferences(instance);
 
+        String libraryName = null;
+        if (cql.contains(".")) libraryName = cql.split("\\.")[0];
+
         // Provide the instance as the value of the '%context' parameter, as well as the
         // value of a parameter named the same as the resource
         // This enables expressions to access the resource by root, as well as through
         // the %context attribute
         String source = String.format(
                 "library LocalLibrary using FHIR version '4.0.0' include FHIRHelpers version '4.0.0' called FHIRHelpers %s parameter %s %s parameter \"%%context\" %s define Expression: %s",
-                buildIncludes(libraries), instance.fhirType(), instance.fhirType(), instance.fhirType(), cql);
+                buildIncludes(libraries, libraryName), instance.fhirType(), instance.fhirType(), instance.fhirType(), cql);
 
         R4LibraryLoader libraryLoader = LibraryHelper.createLibraryLoader(this.getLibraryResourceProvider());
 
