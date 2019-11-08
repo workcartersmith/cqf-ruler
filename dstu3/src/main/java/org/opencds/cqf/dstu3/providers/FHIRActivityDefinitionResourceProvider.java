@@ -5,6 +5,7 @@ import ca.uhn.fhir.rest.annotation.*;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
 import org.hl7.fhir.dstu3.model.*;
 import org.hl7.fhir.exceptions.FHIRException;
+import org.opencds.cqf.dstu3.helpers.Helper;
 import org.opencds.cqf.exceptions.ActivityDefinitionApplyException;
 
 import java.util.*;
@@ -35,7 +36,13 @@ public class FHIRActivityDefinitionResourceProvider extends ActivityDefinitionRe
             throws InternalErrorException, FHIRException, ClassNotFoundException, IllegalAccessException,
             InstantiationException, ActivityDefinitionApplyException
     {
-        ActivityDefinition activityDefinition = this.getDao().read(theId);
+        ActivityDefinition activityDefinition;
+
+        try {
+            activityDefinition = this.getDao().read(theId);
+        } catch (Exception e) {
+            return Helper.createErrorOutcome("Unable to resolve ActivityDefinition/" + theId.getValueAsString());
+        }
 
         return resolveActivityDefinition(activityDefinition, patientId, practitionerId, organizationId);
     }

@@ -197,15 +197,15 @@ public class CqlExecutionProvider {
 
     @Operation(name = "$cql")
     public Bundle evaluate(@OperationParam(name = "code") String code,
-            @OperationParam(name = "patientId") String patientId,
-            @OperationParam(name="periodStart") String periodStart,
-            @OperationParam(name="periodEnd") String periodEnd,
-            @OperationParam(name="productLine") String productLine,
-            @OperationParam(name = "terminologyServiceUri") String terminologyServiceUri,
-            @OperationParam(name = "terminologyUser") String terminologyUser,
-            @OperationParam(name = "terminologyPass") String terminologyPass,
-            @OperationParam(name = "context") String contextParam,
-            @OperationParam(name = "parameters") Parameters parameters) {
+                           @OperationParam(name = "patientId") String patientId,
+                           @OperationParam(name="periodStart") String periodStart,
+                           @OperationParam(name="periodEnd") String periodEnd,
+                           @OperationParam(name="productLine") String productLine,
+                           @OperationParam(name = "terminologyServiceUri") String terminologyServiceUri,
+                           @OperationParam(name = "terminologyUser") String terminologyUser,
+                           @OperationParam(name = "terminologyPass") String terminologyPass,
+                           @OperationParam(name = "context") String contextParam,
+                           @OperationParam(name = "parameters") Parameters parameters) {
 
         if (patientId == null && contextParam != null && contextParam.equals("Patient") ) {
             throw new IllegalArgumentException("Must specify a patientId when executing in Patient context.");
@@ -227,8 +227,8 @@ public class CqlExecutionProvider {
                     Parameters result = new Parameters();
                     TrackBack tb = cte.getLocator();
                     if (tb != null) {
-                       String location = String.format("[%d:%d]",tb.getStartLine(), tb.getStartChar());
-                       result.addParameter().setName("location").setValue(new StringType(location));
+                        String location = String.format("[%d:%d]",tb.getStartLine(), tb.getStartChar());
+                        result.addParameter().setName("location").setValue(new StringType(location));
                     }
 
                     result.setId("Error");
@@ -280,13 +280,13 @@ public class CqlExecutionProvider {
             for (Parameters.ParametersParameterComponent pc : parameters.getParameter())
             {
                 context.setParameter(library.getLocalId(), pc.getName(), pc.getValue());
-            }    
+            }
         }
 
         if (periodStart != null && periodEnd != null) {
             // resolve the measurement period
             Interval measurementPeriod = new Interval(DateHelper.resolveRequestDate(periodStart, true), true,
-            DateHelper.resolveRequestDate(periodEnd, false), true);
+                    DateHelper.resolveRequestDate(periodEnd, false), true);
 
             context.setParameter(null, "Measurement Period",
                     new Interval(DateTime.fromJavaDate((Date) measurementPeriod.getStart()), true,
@@ -327,7 +327,7 @@ public class CqlExecutionProvider {
                         else {
                             result.addParameter().setName("value").setValue(new StringType(res.toString()));
                         }
-                    }                
+                    }
                     else if (res instanceof Iterable) {
                         result.addParameter().setName("value").setResource(bundler.bundle((Iterable)res));
                     }

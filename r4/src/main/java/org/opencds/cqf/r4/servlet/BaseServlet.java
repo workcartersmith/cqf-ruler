@@ -139,7 +139,9 @@ public class BaseServlet extends RestfulServer
             config.addAllowedHeader("Authorization");
             config.addAllowedHeader("Cache-Control");
 
-            config.addAllowedOrigin(HapiProperties.getCorsAllowedOrigin());
+//            config.addAllowedOrigin(HapiProperties.getCorsAllowedOrigin());
+            config.addAllowedOrigin("https://sandbox.cds-hooks.org");
+            config.addAllowedOrigin("*");
 
             config.addExposedHeader("Location");
             config.addExposedHeader("Content-Location");
@@ -191,7 +193,7 @@ public class BaseServlet extends RestfulServer
         //Library processing
         NarrativeLibraryResourceProvider libraryProvider = new NarrativeLibraryResourceProvider(narrativeProvider);
         LibraryResourceProvider jpaLibraryProvider =
-            (LibraryResourceProvider) provider.resolveResourceProvider("Library");
+                (LibraryResourceProvider) provider.resolveResourceProvider("Library");
         libraryProvider.setDao(jpaLibraryProvider.getDao());
         libraryProvider.setContext(jpaLibraryProvider.getContext());
 
