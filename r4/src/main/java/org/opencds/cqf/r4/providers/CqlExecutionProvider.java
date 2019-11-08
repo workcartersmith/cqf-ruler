@@ -20,6 +20,7 @@ import org.opencds.cqf.cql.runtime.Interval;
 import org.opencds.cqf.cql.terminology.TerminologyProvider;
 import org.opencds.cqf.cql.terminology.fhir.FhirTerminologyProvider;
 import org.opencds.cqf.qdm.providers.Qdm54DataProvider;
+import org.opencds.cqf.r4.helpers.CanonicalHelper;
 import org.opencds.cqf.r4.helpers.DateHelper;
 import org.opencds.cqf.r4.helpers.FhirMeasureBundler;
 import org.opencds.cqf.r4.helpers.LibraryHelper;
@@ -115,12 +116,24 @@ public class CqlExecutionProvider {
 
             builder.append("include ");
 
+<<<<<<< HEAD
             if (libraryName == null) {
                 String[] canonicalSplit = reference.getValueAsString().split("/");
                 libraryName = canonicalSplit[canonicalSplit.length - 1].split("\\|")[0];
             }
 
             builder.append(libraryName);
+=======
+            // TODO: This assumes the libraries resource id is the same as the library name,
+            // need to work this out better
+            Library lib = (Library) provider.resolveResourceProvider("Library").getDao().read(new IdType().setValue(CanonicalHelper.getId(reference)));
+            if (lib.hasName()) {
+                builder.append(lib.getName());
+            }
+            else {
+                throw new RuntimeException("Library name unknown");
+            }
+>>>>>>> 514ed563a1415eaf5cf4152d3804ae9c4db8067b
 
             if (reference.hasValue() && reference.getValueAsString().split("\\|").length > 1) {
                 builder.append(" version '");
@@ -129,7 +142,11 @@ public class CqlExecutionProvider {
             }
 
             builder.append(" called ");
+<<<<<<< HEAD
             builder.append(libraryName);
+=======
+            builder.append(lib.getName());
+>>>>>>> 514ed563a1415eaf5cf4152d3804ae9c4db8067b
         }
 
         return builder.toString();

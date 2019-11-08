@@ -1,11 +1,13 @@
 package org.opencds.cqf.r4.providers;
 
+import ca.uhn.fhir.jpa.dao.IFhirResourceDao;
 import ca.uhn.fhir.jpa.rp.r4.ActivityDefinitionResourceProvider;
 import ca.uhn.fhir.rest.annotation.*;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
 import org.hl7.fhir.r4.model.*;
 import org.hl7.fhir.exceptions.FHIRException;
 import org.opencds.cqf.exceptions.ActivityDefinitionApplyException;
+import org.opencds.cqf.r4.helpers.Helper;
 
 import java.util.*;
 
@@ -32,7 +34,13 @@ public class FHIRActivityDefinitionResourceProvider extends ActivityDefinitionRe
             throws InternalErrorException, FHIRException, ClassNotFoundException, IllegalAccessException,
             InstantiationException, ActivityDefinitionApplyException
     {
-        ActivityDefinition activityDefinition = this.getDao().read(theId);
+        ActivityDefinition activityDefinition;
+
+        try {
+            activityDefinition = this.getDao().read(theId);
+        } catch (Exception e) {
+            return Helper.createErrorOutcome("Unable to resolve ActivityDefinition/" + theId.getValueAsString());
+        }
 
         return resolveActivityDefinition(activityDefinition, patientId, practitionerId, organizationId);
     }
@@ -45,11 +53,11 @@ public class FHIRActivityDefinitionResourceProvider extends ActivityDefinitionRe
         Resource result = null;
         try {
             // This is a little hacky...
-            result = (Resource) Class.forName("org.hl7.fhir.dstu3.model." + activityDefinition.getKind().toCode()).newInstance();
+            result = (Resource) Class.forName("org.hl7.fhir.r4.model." + activityDefinition.getKind().toCode()).newInstance();
         }
         catch (Exception e) {
             e.printStackTrace();
-            throw new FHIRException("Could not find org.hl7.fhir.dstu3.model." + activityDefinition.getKind().toCode());
+            throw new FHIRException("Could not find org.hl7.fhir.r4.model." + activityDefinition.getKind().toCode());
         }
 
         switch (result.fhirType()) {
