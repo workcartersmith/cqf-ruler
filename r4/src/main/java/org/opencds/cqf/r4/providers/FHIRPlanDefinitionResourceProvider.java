@@ -65,7 +65,7 @@ public class FHIRPlanDefinitionResourceProvider extends PlanDefinitionResourcePr
             @OptionalParam(name="userTaskContext") String userTaskContext,
             @OptionalParam(name="setting") String setting,
             @OptionalParam(name="settingContext") String settingContext)
-        throws IOException, JAXBException, FHIRException
+            throws IOException, JAXBException, FHIRException
     {
         PlanDefinition planDefinition = this.getDao().read(theId);
 
