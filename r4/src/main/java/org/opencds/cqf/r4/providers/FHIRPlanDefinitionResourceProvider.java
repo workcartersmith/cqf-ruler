@@ -28,7 +28,6 @@ import org.opencds.cqf.r4.config.R4LibraryLoader;
 import org.opencds.cqf.cql.execution.Context;
 import org.opencds.cqf.cql.runtime.DateTime;
 import org.opencds.cqf.exceptions.NotImplementedException;
-import org.opencds.cqf.r4.helpers.CanonicalHelper;
 import org.opencds.cqf.r4.helpers.LibraryHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -71,7 +70,7 @@ public class FHIRPlanDefinitionResourceProvider extends PlanDefinitionResourcePr
         PlanDefinition planDefinition = this.getDao().read(theId);
 
         if (planDefinition == null) {
-            throw new IllegalArgumentException("Couldn't find PlanDefinition " + theId);
+            throw new IllegalArgumentException("Couldn't find PlanDefintion " + theId);
         }
 
         logger.info("Performing $apply operation on PlanDefinition/" + theId);
@@ -117,7 +116,7 @@ public class FHIRPlanDefinitionResourceProvider extends PlanDefinitionResourcePr
             }
 
             else {
-                FHIRActivityDefinitionResourceProvider activitydefinitionProvider = (FHIRActivityDefinitionResourceProvider) provider.resolveResourceProvider("ActivityDefinition");
+                FHIRActivityDefinitionResourceProvider activitydefinitionProvider = new FHIRActivityDefinitionResourceProvider(provider);
                 Resource result;
                 try {
                     if (action.getDefinitionCanonicalType().getValue().startsWith("#")) {
@@ -129,7 +128,7 @@ public class FHIRPlanDefinitionResourceProvider extends PlanDefinitionResourcePr
                     }
                     else {
                         result = activitydefinitionProvider.apply(
-                                new IdType(CanonicalHelper.getId(action.getDefinitionCanonicalType())),
+                                new IdType(action.getDefinitionCanonicalType().getId()),
                                 session.getPatientId(),
                                 session.getEncounterId(),
                                 session.getPractionerId(),
@@ -143,7 +142,7 @@ public class FHIRPlanDefinitionResourceProvider extends PlanDefinitionResourcePr
                     }
 
                     if (result.getId() == null) {
-                        logger.warn("ActivityDefinition %s returned resource with no id, setting one", action.getDefinitionCanonicalType().getId());
+                        logger.warn("ActivityDefintion %s returned resource with no id, setting one", action.getDefinitionCanonicalType().getId());
                         result.setId( UUID.randomUUID().toString() );
                     }
                     session.getCarePlanBuilder()
@@ -217,13 +216,8 @@ public class FHIRPlanDefinitionResourceProvider extends PlanDefinitionResourcePr
                 Object result = executionProvider.evaluateInContext(session.getPlanDefinition(), cql, session.getPatientId());
 
                 if (result == null) {
-<<<<<<< HEAD
                     logger.warn("The condition returned a null value");
                     continue;
-=======
-                    logger.warn("Expression Returned null");
-                    return false;
->>>>>>> 514ed563a1415eaf5cf4152d3804ae9c4db8067b
                 }
 
                 if (!(result instanceof Boolean)) {
