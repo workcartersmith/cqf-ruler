@@ -116,7 +116,7 @@ public class FHIRPlanDefinitionResourceProvider extends PlanDefinitionResourcePr
             }
 
             else {
-                FHIRActivityDefinitionResourceProvider activitydefinitionProvider = new FHIRActivityDefinitionResourceProvider(provider);
+                FHIRActivityDefinitionResourceProvider activitydefinitionProvider = (FHIRActivityDefinitionResourceProvider) provider.resolveResourceProvider("ActivityDefinition");
                 Resource result;
                 try {
                     if (action.getDefinitionCanonicalType().getValue().startsWith("#")) {
@@ -127,8 +127,9 @@ public class FHIRPlanDefinitionResourceProvider extends PlanDefinitionResourcePr
                         );
                     }
                     else {
+                        String[] canonical = action.getDefinitionCanonicalType().asStringValue().split("/");
                         result = activitydefinitionProvider.apply(
-                                new IdType(action.getDefinitionCanonicalType().getId()),
+                                new IdType(canonical[canonical.length - 1]),
                                 session.getPatientId(),
                                 session.getEncounterId(),
                                 session.getPractionerId(),

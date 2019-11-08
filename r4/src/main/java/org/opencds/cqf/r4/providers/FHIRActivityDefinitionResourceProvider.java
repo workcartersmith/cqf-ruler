@@ -1,6 +1,5 @@
 package org.opencds.cqf.r4.providers;
 
-import ca.uhn.fhir.jpa.dao.IFhirResourceDao;
 import ca.uhn.fhir.jpa.rp.r4.ActivityDefinitionResourceProvider;
 import ca.uhn.fhir.rest.annotation.*;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
