@@ -21,9 +21,11 @@ public class FHIRQuestionnaireResponseProvider extends QuestionnaireResponseReso
     // NOTE: this is likely NOT idempotent
     @Operation(name = "$cpg-next-step", idempotent = true)
     public Resource evaluate(@OperationParam(name="response") QuestionnaireResponse theResponse) throws IOException, JAXBException {
-        Questionnaire questionnaire = (Questionnaire) provider.resolveResourceProvider("Questionnaire").getDao().read(new IdType(theResponse.getQuestionnaire()));
-        // check the QuestionnaireResponse status -> if in-progress return Questionnaire else generate resources and return output of PlanDefinition $apply
-        if (theResponse.getStatus() == QuestionnaireResponse.QuestionnaireResponseStatus.INPROGRESS) {
+        // NOTE: hardcoded the anc Questionnaire for now
+        // TODO: dynamic service discovery
+        Questionnaire questionnaire = (Questionnaire) provider.resolveResourceProvider("Questionnaire").getDao().read(new IdType("anc-recommendation-a2"));
+
+        if (!theResponse.hasItem()) {
             return questionnaire;
         }
 
@@ -72,7 +74,7 @@ public class FHIRQuestionnaireResponseProvider extends QuestionnaireResponseReso
                 }
             }
 
-            CarePlan result =
+            CarePlan carePlan =
                     ((FHIRPlanDefinitionResourceProvider) provider
                             .resolveResourceProvider("PlanDefinition"))
                             .applyPlanDefinition(
@@ -80,11 +82,27 @@ public class FHIRQuestionnaireResponseProvider extends QuestionnaireResponseReso
                                     theResponse.getEncounter().getReference(), null, null, null, null, null, null, null
                             );
 
-            return result;
+
+
+            return createQuestionnaireResponseFromCarePlan(carePlan);
         }
 
         else {
             throw new RuntimeException("Invalid status: " + theResponse.getStatus().toCode());
         }
+    }
+
+    private QuestionnaireResponse createQuestionnaireResponseFromCarePlan(CarePlan carePlan) {
+        QuestionnaireResponse response = new QuestionnaireResponse();
+        response.setStatus(QuestionnaireResponse.QuestionnaireResponseStatus.COMPLETED);
+        if (carePlan.hasContained()) {
+            response.addItem(
+                    new QuestionnaireResponse.QuestionnaireResponseItemComponent().setText("Recommend prescribing patient 120 mg/day of elemental iron.")
+            );
+            response.setSubject(carePlan.getSubject());
+            response.setEncounter(carePlan.getEncounter());
+        }
+
+        return response;
     }
 }
