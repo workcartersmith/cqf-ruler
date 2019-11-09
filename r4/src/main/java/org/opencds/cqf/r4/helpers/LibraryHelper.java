@@ -97,6 +97,10 @@ public class LibraryHelper {
 
         // load libraries
         for (CanonicalType ref : measure.getLibrary()) {
+            if (ref.getId() == null) {
+                ref.setId(CanonicalHelper.getId(ref));
+            }
+
             // if library is contained in measure, load it into server
             if (ref.getId().startsWith("#")) {
                 for (Resource resource : measure.getContained()) {
