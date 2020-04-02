@@ -24,7 +24,7 @@ public class MeasureOperationsProvider {
         this.registry = registry;    
     }
 
-    @Operation(name = "$submit-data", idempotent = true, type = Measure.class)
+    @Operation(name = "$submit-data", idempotent = false, type = Measure.class)
     public Resource submitData(RequestDetails details, @IdParam IdType theId,
             @OperationParam(name = "measurereport", min = 1, max = 1, type = MeasureReport.class) MeasureReport report,
             @OperationParam(name = "resource") List<IAnyResource> resources) {
