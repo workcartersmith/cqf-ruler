@@ -33,6 +33,7 @@ import org.opencds.cqf.r4.providers.HQMFProvider;
 import org.opencds.cqf.r4.providers.JpaTerminologyProvider;
 import org.opencds.cqf.r4.providers.LibraryOperationsProvider;
 import org.opencds.cqf.r4.providers.MeasureOperationsProvider;
+import org.opencds.cqf.r4.providers.NotifySubmitDataProvider;
 import org.opencds.cqf.r4.providers.PlanDefinitionApplyProvider;
 import org.springframework.context.ApplicationContext;
 import org.springframework.web.cors.CorsConfiguration;
@@ -226,6 +227,10 @@ public class BaseServlet extends RestfulServer {
         // PlanDefinition processing
         PlanDefinitionApplyProvider planDefProvider = new PlanDefinitionApplyProvider(this.fhirContext, actDefProvider, this.getDao(PlanDefinition.class), this.getDao(ActivityDefinition.class), cql);
         this.registerProvider(planDefProvider);
+
+
+        NotifySubmitDataProvider notifySubmitDataProvider = new NotifySubmitDataProvider(this.fhirContext, this.registry);
+        this.registerProvider(notifySubmitDataProvider);
 
         CdsHooksServlet.setPlanDefinitionProvider(planDefProvider);
         CdsHooksServlet.setLibraryResolutionProvider(libraryProvider);
