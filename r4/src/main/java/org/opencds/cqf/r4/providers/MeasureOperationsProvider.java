@@ -352,13 +352,13 @@ public class MeasureOperationsProvider {
     }
 
     @Operation(name = "$collect-data", idempotent = true, type = Measure.class)
-    public Parameters collectData(@IdParam IdType theId, @RequiredParam(name = "periodStart") String periodStart,
-            @RequiredParam(name = "periodEnd") String periodEnd, @OptionalParam(name = "patient") String patientRef,
-            @OptionalParam(name = "practitioner") String practitionerRef,
-            @OptionalParam(name = "lastReceivedOn") String lastReceivedOn,
-            @OptionalParam(name = "measureEndpoint") Endpoint measureEndpoint,
-            @OptionalParam(name = "dataEndpoint") Endpoint dataEndpoint,
-            @OptionalParam(name = "terminologyEndpoint") Endpoint terminologyEndpoint
+    public Parameters collectData(@IdParam IdType theId, @OperationParam(name = "periodStart") String periodStart,
+            @OperationParam(name = "periodEnd") String periodEnd, @OperationParam(name = "patient") String patientRef,
+            @OperationParam(name = "practitioner") String practitionerRef,
+            @OperationParam(name = "lastReceivedOn") String lastReceivedOn,
+            @OperationParam(name = "measureEndpoint") Endpoint measureEndpoint,
+            @OperationParam(name = "dataEndpoint") Endpoint dataEndpoint,
+            @OperationParam(name = "terminologyEndpoint") Endpoint terminologyEndpoint
 ) throws FHIRException {
 
         // Get the measure we need the data requirements from
@@ -397,12 +397,13 @@ public class MeasureOperationsProvider {
         Parameters parameters = new Parameters();
 
         var report = new MeasureReport();
+        report.setId(theId.getValue() + "-" + patientRef);
 
         report.setMeasure(theId.getValue());
         report.setSubject(new Reference("Patient/" + patientRef));
 
         parameters.addParameter(
-                new Parameters.ParametersParameterComponent().setName("measurereport").setResource(report));
+                new Parameters.ParametersParameterComponent().setName("measureReport").setResource(report));
 
         if (!resources.isEmpty()) {
             for (IBaseResource contained : resources) {
@@ -480,7 +481,7 @@ public class MeasureOperationsProvider {
 
     @Operation(name = "$submit-data", idempotent = true, type = Measure.class)
     public Resource submitData(RequestDetails details, @IdParam IdType theId,
-            @OperationParam(name = "measure-report", min = 1, max = 1, type = MeasureReport.class) MeasureReport report,
+            @OperationParam(name = "measureReport", min = 1, max = 1, type = MeasureReport.class) MeasureReport report,
             @OperationParam(name = "resource") List<IAnyResource> resources) {
         Bundle transactionBundle = new Bundle().setType(Bundle.BundleType.TRANSACTION);
 

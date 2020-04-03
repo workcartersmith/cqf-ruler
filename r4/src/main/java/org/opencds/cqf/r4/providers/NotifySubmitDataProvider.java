@@ -4,6 +4,7 @@ import org.hl7.fhir.r4.model.Endpoint;
 import org.hl7.fhir.r4.model.IdType;
 import org.hl7.fhir.r4.model.Measure;
 import org.hl7.fhir.r4.model.Parameters;
+import org.hl7.fhir.r4.model.StringType;
 import org.opencds.cqf.common.helpers.ClientHelperDos;
 
 import ca.uhn.fhir.context.FhirContext;
@@ -41,18 +42,18 @@ public class NotifySubmitDataProvider {
         Parameters collectDataParameters = new Parameters();
 
         // TODO: Populate parameters
-        collectDataParameters.addParameter("periodStart", periodStart);
-        collectDataParameters.addParameter("periodEnd", periodEnd);
+        collectDataParameters.addParameter().setName("periodStart").setValue(new StringType(periodStart));
+        collectDataParameters.addParameter().setName("periodEnd").setValue(new StringType(periodEnd));
         if (patientRef != null) {
-            collectDataParameters.addParameter("patient", patientRef);
+            collectDataParameters.addParameter().setName("patient").setValue(new StringType(patientRef));
         }
 
         if (practitionerRef != null) {
-            collectDataParameters.addParameter("practitioner", practitionerRef);
+            collectDataParameters.addParameter().setName("practitioner").setValue(new StringType(practitionerRef));
         }
 
         if (lastReceivedOn != null) {
-            collectDataParameters.addParameter("lastReceivedOn", lastReceivedOn);
+            collectDataParameters.addParameter().setName("lastReceivedOn").setValue(new StringType(lastReceivedOn));
         }
 
         Endpoint dataEndpoint = dao.read(new IdType("data-endpoint"));
@@ -75,11 +76,11 @@ public class NotifySubmitDataProvider {
         // call submit-data with collect-data response
         IGenericClient submitClient = ClientHelperDos.getClient(fhirContext, submitDataEndpoint);
 
-        parameters = submitClient.operation()
-                .onType(Measure.class)
+        Parameters result = submitClient.operation()
+                .onInstance(theId)
                 .named("$submit-data")
                 .withParameters(parameters).execute();
 
-        return parameters;
+        return result;
     }
 }

@@ -27,16 +27,20 @@ public class ClientHelperDos {
     public static IGenericClient getClient(FhirContext fhirContext, org.hl7.fhir.dstu3.model.Endpoint endpoint)
     {
         IGenericClient client = getClient(fhirContext, endpoint.getAddress());
-        List<String> headerList = endpoint.getHeader().stream().map(headerString -> headerString.asStringValue()).collect(Collectors.toList());
-        registerAuth(client, headerList);
+        if (endpoint.hasHeader()){
+            List<String> headerList = endpoint.getHeader().stream().map(headerString -> headerString.asStringValue()).collect(Collectors.toList());
+            registerAuth(client, headerList);
+        }
         return client;
     }
 
     public static IGenericClient getClient(FhirContext fhirContext, org.hl7.fhir.r4.model.Endpoint endpoint)
     {
         IGenericClient client = getClient(fhirContext, endpoint.getAddress());
-        List<String> headerList = endpoint.getHeader().stream().map(headerString -> headerString.asStringValue()).collect(Collectors.toList());
-        registerAuth(client, headerList);
+        if (endpoint.hasHeader()){
+            List<String> headerList = endpoint.getHeader().stream().map(headerString -> headerString.asStringValue()).collect(Collectors.toList());
+            registerAuth(client, headerList);
+        }
         return client;
     }
 
