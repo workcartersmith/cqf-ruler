@@ -16,6 +16,7 @@ import org.hl7.fhir.r4.model.StringType;
 import org.opencds.cqf.common.providers.LibraryResolutionProvider;
 import org.opencds.cqf.common.providers.LibrarySourceProvider;
 import org.opencds.cqf.library.r4.NarrativeProvider;
+import org.opencds.cqf.r4.builders.OperationOutcomeBuilder;
 
 import ca.uhn.fhir.rest.annotation.IdParam;
 import ca.uhn.fhir.rest.annotation.Operation;
@@ -25,7 +26,9 @@ import ca.uhn.fhir.rest.api.RestOperationTypeEnum;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.jpa.rp.r4.LibraryResourceProvider;
 import ca.uhn.fhir.jpa.searchparam.SearchParameterMap;
+import ca.uhn.fhir.model.dstu2.resource.OperationOutcome;
 import ca.uhn.fhir.rest.param.StringParam;
+import ca.uhn.fhir.util.OperationOutcomeUtil;
 
 import org.hl7.fhir.instance.model.api.IBaseResource;
 
@@ -77,27 +80,30 @@ public class LibraryOperationsProvider implements LibraryResolutionProvider<org.
         Library theResource = this.libraryResourceProvider.getDao().read(theId);
         //this.formatCql(theResource);
 
-        ModelManager modelManager = this.getModelManager();
-        LibraryManager libraryManager = this.getLibraryManager(modelManager);
-
-        CqlTranslator translator = this.dataRequirementsProvider.getTranslator(theResource, libraryManager, modelManager);
-        if (translator.getErrors().size() > 0) {
-            throw new RuntimeException("Errors during library compilation.");
-        }
-        
-        this.dataRequirementsProvider.ensureElm(theResource, translator);
-        this.dataRequirementsProvider.ensureRelatedArtifacts(theResource, translator, this);
-        this.dataRequirementsProvider.ensureDataRequirements(theResource, translator);
+        var modelManager = this.getModelManager();
+        var libraryManager = this.getLibraryManager(modelManager);
+       
+        List<Library> updatedLibraries = this.dataRequirementsProvider.updateDataRequirements(theResource, modelManager, libraryManager, this.getLibraryResourceProvider());
 
 		try {
-			Narrative n = this.narrativeProvider.getNarrative(this.libraryResourceProvider.getContext(), theResource);
-			theResource.setText(n);
+            for (var library : updatedLibraries) {
+                Narrative n = this.narrativeProvider.getNarrative(this.libraryResourceProvider.getContext(), theResource);
+                theResource.setText(n);
+            }
+
 		} catch (Exception e) {
 			//Ignore the exception so the resource still gets updated
-		}
+        }
 
-        return this.libraryResourceProvider.update(theRequest, theResource, theId,
-                theRequestDetails.getConditionalUrl(RestOperationTypeEnum.UPDATE), theRequestDetails);
+        
+        // TODO: Transaction for all the libraries.
+        for (var library : updatedLibraries) {
+            MethodOutcome outcome = this.libraryResourceProvider.update(theRequest, library, library.getIdElement(),
+            theRequestDetails.getConditionalUrl(RestOperationTypeEnum.UPDATE), theRequestDetails);
+        }
+
+        return this.libraryResourceProvider.update(theRequest, theResource, theResource.getIdElement(),
+            theRequestDetails.getConditionalUrl(RestOperationTypeEnum.UPDATE), theRequestDetails);
     }
 
     @Operation(name = "$get-elm", idempotent = true, type = Library.class)

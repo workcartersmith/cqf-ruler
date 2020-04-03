@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import com.google.common.base.Strings;
@@ -551,13 +552,16 @@ public class DataRequirementsProvider {
         library.getContent().add(elm);
     }
 
-    public void ensureRelatedArtifacts(org.hl7.fhir.r4.model.Library library, CqlTranslator translator, LibraryResolutionProvider<org.hl7.fhir.r4.model.Library> libraryResourceProvider)
+    public void ensureRelatedArtifacts(Map<String, Pair<org.hl7.fhir.r4.model.Library,org.hl7.elm.r1.Library>>  completedLibaryStack, org.hl7.fhir.r4.model.Library library, CqlTranslator translator, ModelManager modelManager, LibraryManager libraryManager, LibraryResolutionProvider<org.hl7.fhir.r4.model.Library> libraryResolutionProvider)
     {
         library.getRelatedArtifact().clear();
         org.hl7.elm.r1.Library elm = translator.toELM();
         if (elm.getIncludes() != null && !elm.getIncludes().getDef().isEmpty()) {
             for (org.hl7.elm.r1.IncludeDef def : elm.getIncludes().getDef()) {
-				org.hl7.fhir.r4.model.Library relatedLibrary = libraryResourceProvider.resolveLibraryByName(def.getPath(), def.getVersion());
+                org.hl7.fhir.r4.model.Library relatedLibrary = libraryResolutionProvider.resolveLibraryByName(def.getPath(), def.getVersion());
+                
+                this.innerUpdateDataRequirements(completedLibaryStack, relatedLibrary, modelManager, libraryManager, libraryResolutionProvider);
+                
                 library.addRelatedArtifact(new RelatedArtifact().setType(RelatedArtifact.RelatedArtifactType.DEPENDSON)
                         .setResource(relatedLibrary.getIdElement().getResourceType() + "/" + relatedLibrary.getIdElement().getIdPart())
                 );
@@ -577,7 +581,40 @@ public class DataRequirementsProvider {
         }
     }
 
-    public void ensureDataRequirements(org.hl7.fhir.r4.model.Library library, CqlTranslator translator) {
+    public List<org.hl7.fhir.r4.model.Library> updateDataRequirements(
+            org.hl7.fhir.r4.model.Library library, ModelManager modelManager, 
+            LibraryManager libraryManager, 
+            LibraryResolutionProvider<org.hl7.fhir.r4.model.Library> libraryResolutionProvider) {
+
+        Map<String, Pair<org.hl7.fhir.r4.model.Library,org.hl7.elm.r1.Library>> completedLibaryStack = new HashMap<>();
+ 
+        this.innerUpdateDataRequirements(completedLibaryStack, library, modelManager, libraryManager, libraryResolutionProvider);
+
+        return completedLibaryStack.values().stream().map(x -> x.getLeft()).collect(Collectors.toList());
+    }
+
+    public void innerUpdateDataRequirements(Map<String, Pair<org.hl7.fhir.r4.model.Library,org.hl7.elm.r1.Library>> completedLibaryStack, org.hl7.fhir.r4.model.Library library, 
+        ModelManager modelManager, LibraryManager libraryManager, LibraryResolutionProvider<org.hl7.fhir.r4.model.Library> libraryResolutionProvider) {
+            if (completedLibaryStack.containsKey(library.getId())) {
+                // Library is already processed.
+                return;
+            }
+
+            CqlTranslator translator = this.getTranslator(library, libraryManager, modelManager);
+            if (translator.getErrors().size() > 0) {
+                throw new RuntimeException("Errors during library compilation.");
+            }
+
+            this.ensureElm(library, translator);
+            this.ensureRelatedArtifacts(completedLibaryStack, library, translator, modelManager, libraryManager, libraryResolutionProvider);
+            this.ensureDataRequirements(completedLibaryStack, library, translator);
+
+
+            completedLibaryStack.put(library.getIdElement().getIdPart(), Pair.of(library, translator.toELM()));
+    }
+
+
+    public void ensureDataRequirements(Map<String, Pair<org.hl7.fhir.r4.model.Library,org.hl7.elm.r1.Library>> completedLibaryStack, org.hl7.fhir.r4.model.Library library, CqlTranslator translator) {
         library.getDataRequirement().clear();
 
         List<DataRequirement> reqs = new ArrayList<>();
@@ -589,7 +626,7 @@ public class DataRequirementsProvider {
                 DataRequirement.DataRequirementCodeFilterComponent codeFilter = new DataRequirement.DataRequirementCodeFilterComponent();
                 codeFilter.setPath(retrieve.getCodeProperty());
                 if (retrieve.getCodes() instanceof ValueSetRef) {
-                    codeFilter.setValueSet(getValueSetId(((ValueSetRef) retrieve.getCodes()).getName(), translator));
+                    codeFilter.setValueSet(getValueSetId(completedLibaryStack, (ValueSetRef) retrieve.getCodes(), translator.toELM()));
                 }
                 dataReq.setCodeFilter(Collections.singletonList(codeFilter));
             }
@@ -609,17 +646,35 @@ public class DataRequirementsProvider {
         library.setDataRequirement(reqs);     
     }
 
-    public String getValueSetId(String valueSetName, CqlTranslator translator) {
-        org.hl7.elm.r1.Library.ValueSets valueSets = translator.toELM().getValueSets();
-        if (valueSets != null) {
-            for (org.hl7.elm.r1.ValueSetDef def : valueSets.getDef()) {
-                if (def.getName().equals(valueSetName)) {
-                    return def.getId();
+    public String getValueSetId(Map<String, Pair<org.hl7.fhir.r4.model.Library, org.hl7.elm.r1.Library>> completedLibaryStack, ValueSetRef valueSetRef, org.hl7.elm.r1.Library library) {
+        var valueSets = library.getValueSets();
+
+        if (valueSetRef.getLibraryName() == null) {
+            if (valueSets != null) {
+                for (org.hl7.elm.r1.ValueSetDef def : valueSets.getDef()) {
+                    if (def.getName().equals(valueSetRef.getName())) {
+                        return def.getId();
+                    }
+                }
+            }
+        }
+        else if (valueSetRef.getLibraryName() != null) {
+            if (library.getIncludes() != null && library.getIncludes().getDef() != null)
+            {
+                Optional<org.hl7.elm.r1.IncludeDef> include = library.getIncludes().getDef().stream().filter(x -> x.getLocalIdentifier() != null && x.getLocalIdentifier().equals(valueSetRef.getLibraryName())).findFirst();
+                if (include.isPresent()) {
+                    Optional<org.hl7.elm.r1.Library> lib = completedLibaryStack.values().stream().map(x -> x.getRight()).filter(x -> x.getIdentifier().getId().equals(include.get().getPath())).findFirst();
+                    if (lib.isPresent()) {
+                        Optional<org.hl7.elm.r1.ValueSetDef> def = lib.get().getValueSets().getDef().stream().filter(x -> x.getName().equals(valueSetRef.getName())).findFirst();
+                        if (def.isPresent()) {
+                            return def.get().getId();
+                        }
+                    }
                 }
             }
         }
 
-        return valueSetName;
+        return null;
     }
 
 }
