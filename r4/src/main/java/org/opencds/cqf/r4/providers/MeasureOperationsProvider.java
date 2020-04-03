@@ -11,6 +11,7 @@ import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Composition;
+import org.hl7.fhir.r4.model.DataRequirement;
 import org.hl7.fhir.r4.model.Endpoint;
 import org.hl7.fhir.r4.model.Extension;
 import org.hl7.fhir.r4.model.IdType;
@@ -23,13 +24,17 @@ import org.hl7.fhir.r4.model.Reference;
 import org.hl7.fhir.r4.model.RelatedArtifact;
 import org.hl7.fhir.r4.model.Resource;
 import org.hl7.fhir.r4.model.StringType;
+import org.hl7.fhir.r4.model.ValueSet;
+import org.hl7.fhir.r4.model.Library;
 import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.instance.model.api.IAnyResource;
 import org.hl7.fhir.instance.model.api.IBase;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.utilities.xhtml.XhtmlNode;
 import org.opencds.cqf.common.evaluation.EvaluationProviderFactory;
+import org.opencds.cqf.common.helpers.ClientHelperDos;
 import org.opencds.cqf.common.providers.LibraryResolutionProvider;
+import org.opencds.cqf.common.providers.RemoteLibraryResolutionProvider;
 import org.opencds.cqf.cql.execution.LibraryLoader;
 import org.opencds.cqf.library.r4.NarrativeProvider;
 import org.opencds.cqf.measure.r4.CqfMeasure;
@@ -40,6 +45,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
+import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.jpa.dao.DaoRegistry;
 import ca.uhn.fhir.jpa.rp.r4.MeasureResourceProvider;
 import ca.uhn.fhir.jpa.searchparam.SearchParameterMap;
@@ -51,9 +57,12 @@ import ca.uhn.fhir.rest.annotation.RequiredParam;
 import ca.uhn.fhir.rest.api.MethodOutcome;
 import ca.uhn.fhir.rest.api.RestOperationTypeEnum;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
+import ca.uhn.fhir.rest.client.api.IGenericClient;
 import ca.uhn.fhir.rest.param.TokenParam;
 import ca.uhn.fhir.rest.param.TokenParamModifier;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
+
+import org.opencds.cqf.cds.discovery.DiscoveryResolutionR4;
 
 public class MeasureOperationsProvider {
 
@@ -65,6 +74,7 @@ public class MeasureOperationsProvider {
     private MeasureResourceProvider measureResourceProvider;
     private DaoRegistry registry;
     private EvaluationProviderFactory factory;
+    private final int URI_MAX_LENGTH = 8000;
 
 
     private static final Logger logger = LoggerFactory.getLogger(MeasureOperationsProvider.class);
@@ -331,6 +341,30 @@ public class MeasureOperationsProvider {
             @OptionalParam(name = "dataEndpoint") Endpoint dataEndpoint,
             @OptionalParam(name = "terminologyEndpoint") Endpoint terminologyEndpoint
 ) throws FHIRException {
+
+        // Get the measure we need the data requirements from
+        Measure measure;
+        Library dataRequirements;
+        if (measureEndpoint == null) {
+            measure = this.measureResourceProvider.getDao().read(theId);
+            dataRequirements = this.dataRequirementsProvider.getDataRequirements(measure, this.libraryResolutionProvider);
+        }
+        else 
+        {
+            IGenericClient measureClient = ClientHelperDos.getClient(FhirContext.forR4(), measureEndpoint);
+            measure = measureClient.read().resource(Measure.class).withId(theId).execute();
+            dataRequirements = this.dataRequirementsProvider.getDataRequirements(measure, new RemoteLibraryResolutionProvider<Library>(measureClient));
+        }
+
+
+
+
+
+        // If measureEndpoint, get the measure from there.
+
+        // else, local
+
+        
         // TODO: Spec says that the periods are not required, but I am not sure what to
         // do when they aren't supplied so I made them required
         MeasureReport report = evaluateMeasure(theId, periodStart, periodEnd, null, null, patientRef, null,
@@ -477,4 +511,95 @@ public class MeasureOperationsProvider {
         }
         return transactionEntry;
     }
+
+    public List<String> resolveValueSetCodes(IGenericClient terminologyClient, String valueSetId) {
+        Bundle bundle = (Bundle) terminologyClient.search().forResource("ValueSet").where(ValueSet.URL.matches().value(valueSetId)).execute();
+        if (bundle == null) {
+            // TODO: report missing terminology
+            return null;
+        }
+        List<String> ret = new ArrayList<>();
+        StringBuilder codes = new StringBuilder();
+        if (bundle.hasEntry() && bundle.getEntry().size() == 1) {
+            if (bundle.getEntry().get(0).hasResource() && bundle.getEntry().get(0).getResource() instanceof ValueSet) {
+                ValueSet valueSet = (ValueSet) bundle.getEntry().get(0).getResource();
+                if (valueSet.hasCompose() && valueSet.getCompose().hasInclude()) {
+                    for (ValueSet.ConceptSetComponent concepts : valueSet.getCompose().getInclude()) {
+                        String system = concepts.getSystem();
+                        if (concepts.hasConcept()) {
+                            for (ValueSet.ConceptReferenceComponent concept : concepts.getConcept()) {
+                                String codeToken = system + "|" + concept.getCode();
+                                if (codes.length() > 0) {
+                                    codes.append(",");
+                                }
+                                else if ((codes.length() + codeToken.length()) > URI_MAX_LENGTH) {
+                                    ret.add(codes.toString());
+                                    codes = new StringBuilder();
+                                }
+                                codes.append(codeToken);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        ret.add(codes.toString());
+        return ret;
+    }
+
+    public List<String> createRequestUrl(IGenericClient terminologyClient, DataRequirement dataRequirement) {
+        if (!DiscoveryResolutionR4.isPatientCompartment(dataRequirement.getType())) return null;
+        String patientRelatedResource = dataRequirement.getType() + "?" + DiscoveryResolutionR4.getPatientSearchParam(dataRequirement.getType()) + "=" + PATIENT_ID_CONTEXT;
+        List<String> ret = new ArrayList<>();
+        if (dataRequirement.hasCodeFilter()) {
+            for (DataRequirement.DataRequirementCodeFilterComponent codeFilterComponent : dataRequirement.getCodeFilter()) {
+                if (!codeFilterComponent.hasPath()) continue;
+                String path = mapCodePathToSearchParam(dataRequirement.getType(), codeFilterComponent.getPath());
+                if (codeFilterComponent.hasValueSetElement()) {
+                    for (String codes : resolveValueSetCodes(terminologyClient, codeFilterComponent.getValueSetElement().getId())) {
+                        ret.add(patientRelatedResource + "&" + path + "=" + codes);
+                    }
+                }
+            }
+            return ret;
+        }
+        else {
+            ret.add(patientRelatedResource);
+            return ret;
+        }
+    }
+
+    public List<String> getPrefetchUrlList(IGenericClient terminologyClient, Library library) {
+        List<String> prefetchList = new ArrayList<String>();
+        if (!library.hasDataRequirement()) return null;
+        for (DataRequirement dataRequirement : library.getDataRequirement()) {
+            List<String> requestUrls = createRequestUrl(terminologyClient, dataRequirement);
+            if (requestUrls != null) {
+                prefetchList.addAll(requestUrls);
+            }
+        }
+        return prefetchList;
+    }
+
+    private String mapCodePathToSearchParam(String dataType, String path) {
+        switch (dataType) {
+            case "MedicationAdministration":
+                if (path.equals("medication")) return "code";
+                break;
+            case "MedicationDispense":
+                if (path.equals("medication")) return "code";
+                break;
+            case "MedicationRequest":
+                if (path.equals("medication")) return "code";
+                break;
+            case "MedicationStatement":
+                if (path.equals("medication")) return "code";
+                break;
+            default:
+                if (path.equals("vaccineCode")) return "vaccine-code";
+                break;
+        }
+        return path.replace('.', '-').toLowerCase();
+    }
+
 }
