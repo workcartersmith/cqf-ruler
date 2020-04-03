@@ -378,7 +378,7 @@ public class MeasureOperationsProvider {
         List<String> queries;
         if (terminologyEndpoint != null) {
             IGenericClient terminologyClient = ClientHelperDos.getClient(FhirContext.forR4(), measureEndpoint);
-            queries = this.getPrefetchUrlList(terminologyClient, dataRequirements);
+            queries = this.getPrefetchUrlList(terminologyClient, dataRequirements, patientRef.replace("Patient/", ""));
         } else {
             // Do local data requirements expansion;
             queries = null;
@@ -400,7 +400,7 @@ public class MeasureOperationsProvider {
 
         report.setMeasure(theId.getValue());
         report.setSubject(new Reference("Patient/" + patientRef));
-        
+
         parameters.addParameter(
                 new Parameters.ParametersParameterComponent().setName("measurereport").setResource(report));
 
@@ -580,10 +580,10 @@ public class MeasureOperationsProvider {
         return ret;
     }
 
-    public List<String> createRequestUrl(IGenericClient terminologyClient, DataRequirement dataRequirement) {
+    public List<String> createRequestUrl(IGenericClient terminologyClient, DataRequirement dataRequirement, String patientId) {
         DiscoveryResolutionR4 disco = new DiscoveryResolutionR4(null);
         if (!DiscoveryResolutionR4.isPatientCompartment(dataRequirement.getType())) return null;
-        String patientRelatedResource = dataRequirement.getType() + "?" + disco.getPatientSearchParam(dataRequirement.getType()) + "=" + PATIENT_ID_CONTEXT;
+        String patientRelatedResource = dataRequirement.getType() + "?" + disco.getPatientSearchParam(dataRequirement.getType()) + "=" + patientId;
         List<String> ret = new ArrayList<>();
         if (dataRequirement.hasCodeFilter()) {
             for (DataRequirement.DataRequirementCodeFilterComponent codeFilterComponent : dataRequirement.getCodeFilter()) {
@@ -603,11 +603,11 @@ public class MeasureOperationsProvider {
         }
     }
 
-    public List<String> getPrefetchUrlList(IGenericClient terminologyClient, Library library) {
+    public List<String> getPrefetchUrlList(IGenericClient terminologyClient, Library library, String patientId) {
         List<String> prefetchList = new ArrayList<String>();
         if (!library.hasDataRequirement()) return null;
         for (DataRequirement dataRequirement : library.getDataRequirement()) {
-            List<String> requestUrls = createRequestUrl(terminologyClient, dataRequirement);
+            List<String> requestUrls = createRequestUrl(terminologyClient, dataRequirement, patientId);
             if (requestUrls != null) {
                 prefetchList.addAll(requestUrls);
             }
