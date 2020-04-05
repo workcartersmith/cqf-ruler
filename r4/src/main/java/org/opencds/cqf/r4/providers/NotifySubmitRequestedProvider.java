@@ -16,17 +16,17 @@ import ca.uhn.fhir.rest.annotation.OptionalParam;
 import ca.uhn.fhir.rest.annotation.RequiredParam;
 import ca.uhn.fhir.rest.client.api.IGenericClient;
 
-public class NotifySubmitDataProvider {
+public class NotifySubmitRequestedProvider {
 
     private FhirContext fhirContext;
     private DaoRegistry daoRegistry;
 
-    public NotifySubmitDataProvider(FhirContext fhirContext, DaoRegistry daoRegistry) {
+    public NotifySubmitRequestedProvider(FhirContext fhirContext, DaoRegistry daoRegistry) {
         this.fhirContext = fhirContext;
         this.daoRegistry = daoRegistry;
     }
 
-    @Operation(name = "$notify-submit-data", idempotent = false, type = Measure.class)
+    @Operation(name = "$notify-submit-requested", idempotent = false, type = Measure.class)
     public Parameters notifySubmitData(@IdParam IdType theId, @RequiredParam(name = "periodStart") String periodStart,
                                        @RequiredParam(name = "periodEnd") String periodEnd, @OptionalParam(name = "patient") String patientRef,
                                        @OptionalParam(name = "practitioner") String practitionerRef,

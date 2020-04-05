@@ -33,7 +33,7 @@ import org.opencds.cqf.r4.providers.HQMFProvider;
 import org.opencds.cqf.r4.providers.JpaTerminologyProvider;
 import org.opencds.cqf.r4.providers.LibraryOperationsProvider;
 import org.opencds.cqf.r4.providers.MeasureOperationsProvider;
-import org.opencds.cqf.r4.providers.NotifySubmitDataProvider;
+import org.opencds.cqf.r4.providers.NotifySubmitRequestedProvider;
 import org.opencds.cqf.r4.providers.PlanDefinitionApplyProvider;
 import org.springframework.context.ApplicationContext;
 import org.springframework.web.cors.CorsConfiguration;
@@ -230,7 +230,7 @@ public class BaseServlet extends RestfulServer {
         this.registerProvider(planDefProvider);
 
 
-        NotifySubmitDataProvider notifySubmitDataProvider = new NotifySubmitDataProvider(this.fhirContext, this.registry);
+        NotifySubmitRequestedProvider notifySubmitDataProvider = new NotifySubmitRequestedProvider(this.fhirContext, this.registry);
         this.registerProvider(notifySubmitDataProvider);
 
         CdsHooksServlet.setPlanDefinitionProvider(planDefProvider);

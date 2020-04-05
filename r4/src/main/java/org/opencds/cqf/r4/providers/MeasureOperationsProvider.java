@@ -406,14 +406,12 @@ public class MeasureOperationsProvider {
                 new Parameters.ParametersParameterComponent().setName("measureReport").setResource(report));
 
         if (!resources.isEmpty()) {
+            Map<String, Resource> resourceMap = new HashMap<>();
             for (IBaseResource contained : resources) {
-
-                // TODO: Add reference to report
                 if (contained instanceof Bundle) {
-                    addEvaluatedResourcesToParameters((Bundle) contained, parameters);
+                    addBundledResourcesToParameters((Bundle) contained, parameters, resourceMap);
                 }  else {
-                    parameters.addParameter(new Parameters.ParametersParameterComponent().setName("resource")
-                    .setResource((Resource)contained));
+                    addEvaluatedResourceToParameters((Resource)contained, parameters, resourceMap);                  
                 }
             }
         }
@@ -426,19 +424,22 @@ public class MeasureOperationsProvider {
         return parameters;
     }
 
-    private void addEvaluatedResourcesToParameters(Bundle contained, Parameters parameters) {
-        Map<String, Resource> resourceMap = new HashMap<>();
+    private void addEvaluatedResourceToParameters(Resource resource, Parameters parameters, Map<String, Resource> resourceMap) {
+        if (!resourceMap.containsKey(resource.getIdElement().getValue())) {
+            parameters.addParameter(new Parameters.ParametersParameterComponent().setName("resource")
+                    .setResource(resource));
+
+            resourceMap.put(resource.getIdElement().getValue(), resource);
+
+            resolveReferences(resource, parameters, resourceMap);
+        }
+    }
+
+    private void addBundledResourcesToParameters(Bundle contained, Parameters parameters, Map<String, Resource> resourceMap) {
         if (contained.hasEntry()) {
             for (Bundle.BundleEntryComponent entry : contained.getEntry()) {
                 if (entry.hasResource() && !(entry.getResource() instanceof ListResource)) {
-                    if (!resourceMap.containsKey(entry.getResource().getIdElement().getValue())) {
-                        parameters.addParameter(new Parameters.ParametersParameterComponent().setName("resource")
-                                .setResource(entry.getResource()));
-
-                        resourceMap.put(entry.getResource().getIdElement().getValue(), entry.getResource());
-
-                        resolveReferences(entry.getResource(), parameters, resourceMap);
-                    }
+                    addEvaluatedResourceToParameters(entry.getResource(), parameters, resourceMap);                    
                 }
             }
         }
@@ -582,7 +583,7 @@ public class MeasureOperationsProvider {
     }
 
     public List<String> createRequestUrl(IGenericClient terminologyClient, DataRequirement dataRequirement, String patientId) {
-        DiscoveryResolutionR4 disco = new DiscoveryResolutionR4(null);
+        DiscoveryResolutionR4 disco = new DiscoveryResolutionR4(terminologyClient);
         if (!DiscoveryResolutionR4.isPatientCompartment(dataRequirement.getType())) return null;
         String patientRelatedResource = dataRequirement.getType() + "?" + disco.getPatientSearchParam(dataRequirement.getType()) + "=" + patientId;
         List<String> ret = new ArrayList<>();
@@ -591,7 +592,7 @@ public class MeasureOperationsProvider {
                 if (!codeFilterComponent.hasPath()) continue;
                 String path = mapCodePathToSearchParam(dataRequirement.getType(), codeFilterComponent.getPath());
                 if (codeFilterComponent.hasValueSetElement()) {
-                    for (String codes : resolveValueSetCodes(terminologyClient, codeFilterComponent.getValueSetElement().getId())) {
+                    for (String codes : resolveValueSetCodes(terminologyClient, codeFilterComponent.getValueSetElement().asStringValue())) {
                         ret.add(patientRelatedResource + "&" + path + "=" + codes);
                     }
                 }
