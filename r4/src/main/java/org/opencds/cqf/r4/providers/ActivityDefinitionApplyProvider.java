@@ -6,13 +6,13 @@ import ca.uhn.fhir.rest.annotation.*;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
 import org.hl7.fhir.r4.model.*;
 import org.hl7.fhir.r4.model.Task.TaskRestrictionComponent;
+import org.opencds.cqf.cql.runtime.Interval;
 import org.hl7.fhir.exceptions.FHIRException;
 import org.opencds.cqf.cql.model.R4FhirModelResolver;
 import org.opencds.cqf.cql.model.ModelResolver;
 import org.opencds.cqf.common.exceptions.ActivityDefinitionApplyException;
+import org.opencds.cqf.common.helpers.DateHelper;
 import org.opencds.cqf.r4.helpers.Helper;
-import java.util.Calendar;
-
 
 import java.util.*;
 
@@ -142,17 +142,28 @@ public class ActivityDefinitionApplyProvider {
             task.setDescription(activityDefinition.getDescription());
         }
 
-        //Need to figure out setting the Tast Period
-        // if (activityDefinition.hasTiming()) {
-        //     TaskRestrictionComponent restrictionComponent = new TaskRestrictionComponent();
-        //     if (activityDefinition.hasTimingTiming()) {
-        //         restrictionComponent.setRepetitions(activityDefinition.getTimingTiming().getRepeat().getFrequency());
-        //         Calendar today = Calendar.getInstance();
-        //         //restrictionComponent.setPeriod(new Period().setEnd(Calendar.getInstance().setTime(today.getTime().getHours() + activityDefinition.getTimingTiming().getRepeat().getPeriod().intValue())));
-        //     }
-        //     task.setRestriction(restrictionComponent);
-        // }
-
+        if (activityDefinition.hasTiming()) {
+            TaskRestrictionComponent restrictionComponent = new TaskRestrictionComponent();
+            if (activityDefinition.hasTimingTiming()) {
+                Extension timingExtension = new Extension();
+                timingExtension.setUrl("http://hl7.org/fhir/us/qicore/StructureDefinition/ersd-timing");
+                timingExtension.setValue(activityDefinition.getTiming());
+                restrictionComponent.addExtension(timingExtension);
+                restrictionComponent.setRepetitions(activityDefinition.getTimingTiming().getRepeat().getFrequency());
+            }
+            else if (activityDefinition.hasTimingDuration()) {
+                Calendar calendar = Calendar.getInstance();
+                calendar.setTimeZone(TimeZone.getTimeZone("UTC"));
+                Period period = new Period();
+                period.setStart(calendar.getTime());
+                period.setEnd(DateHelper.increaseCurrentDate(activityDefinition.getTimingDuration().getUnit(), activityDefinition.getTimingDuration().getValue()));
+                restrictionComponent.setPeriod(period);
+            }
+            else if (activityDefinition.hasTimingPeriod()) {
+                restrictionComponent.setPeriod(activityDefinition.getTimingPeriod());
+            }
+            task.setRestriction(restrictionComponent);
+        }
         return task;
     }
 

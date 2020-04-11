@@ -1,5 +1,6 @@
 package org.opencds.cqf.common.helpers;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -42,6 +43,22 @@ public class DateHelper {
                 calendar.set(Calendar.DAY_OF_MONTH, 1);
                 calendar.add(Calendar.DATE, -1);
             }
+        }
+        return calendar.getTime();
+    }
+
+    public static Date increaseCurrentDate(String unit, BigDecimal value) {
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTimeZone(TimeZone.getTimeZone("UTC"));
+        switch (unit) {
+            //"s" is being used for testing
+            case ("s") : calendar.add(Calendar.SECOND, value.intValue());
+            case ("h") : calendar.add(Calendar.HOUR_OF_DAY, value.intValue()); break;
+            case ("d") : calendar.add(Calendar.DAY_OF_MONTH, value.intValue()); break;
+            case ("w") : calendar.add(Calendar.WEEK_OF_MONTH, value.intValue()); break;
+            case ("m") : calendar.add(Calendar.MONTH, value.intValue()); break;
+            default :
+                throw new RuntimeException("Duration unit must be a DateTime unit. ");
         }
         return calendar.getTime();
     }
