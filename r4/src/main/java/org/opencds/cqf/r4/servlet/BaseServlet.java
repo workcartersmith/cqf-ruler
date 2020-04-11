@@ -30,6 +30,7 @@ import org.opencds.cqf.measure.r4.VersionedTerminologyRef;
 import org.opencds.cqf.r4.providers.ActivityDefinitionApplyProvider;
 import org.opencds.cqf.r4.providers.ApplyCqlOperationProvider;
 import org.opencds.cqf.r4.providers.CacheValueSetsProvider;
+import org.opencds.cqf.r4.providers.CarePlanProvider;
 import org.opencds.cqf.r4.providers.CodeSystemUpdateProvider;
 import org.opencds.cqf.r4.providers.CqlExecutionProvider;
 import org.opencds.cqf.r4.providers.HQMFProvider;
@@ -231,6 +232,9 @@ public class BaseServlet extends RestfulServer {
         // PlanDefinition processing
         PlanDefinitionApplyProvider planDefProvider = new PlanDefinitionApplyProvider(this.fhirContext, actDefProvider, this.getDao(PlanDefinition.class), this.getDao(ActivityDefinition.class), cql);
         this.registerProvider(planDefProvider);
+
+        CarePlanProvider carePlanProvider = new CarePlanProvider();
+        this.registerProvider(carePlanProvider);
 
         CdsHooksServlet.setPlanDefinitionProvider(planDefProvider);
         CdsHooksServlet.setLibraryResolutionProvider(libraryProvider);
