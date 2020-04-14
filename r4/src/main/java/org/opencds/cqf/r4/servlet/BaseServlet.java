@@ -78,7 +78,8 @@ public class BaseServlet extends RestfulServer {
 
         // Fhir Context
         this.fhirContext = appCtx.getBean(FhirContext.class);
-		this.fhirContext.getRestfulClientFactory().setServerValidationMode(ServerValidationModeEnum.NEVER);
+        this.fhirContext.getRestfulClientFactory().setServerValidationMode(ServerValidationModeEnum.NEVER);
+        this.fhirContext.getRestfulClientFactory().setSocketTimeout(100 * 1000);
 		this.fhirContext.registerCustomType(VersionedTerminologyRef.class);
 		this.fhirContext.registerCustomType(CodeTerminologyRef.class);
 		this.fhirContext.registerCustomType(PopulationCriteriaMap.class);
@@ -233,7 +234,7 @@ public class BaseServlet extends RestfulServer {
         PlanDefinitionApplyProvider planDefProvider = new PlanDefinitionApplyProvider(this.fhirContext, actDefProvider, this.getDao(PlanDefinition.class), this.getDao(ActivityDefinition.class), cql);
         this.registerProvider(planDefProvider);
 
-        CarePlanProvider carePlanProvider = new CarePlanProvider();
+        CarePlanProvider carePlanProvider = new CarePlanProvider(this.fhirContext, registry);
         this.registerProvider(carePlanProvider);
 
         CdsHooksServlet.setPlanDefinitionProvider(planDefProvider);

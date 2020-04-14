@@ -1,91 +1,109 @@
 package org.opencds.cqf.r4.providers;
 
+import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.jpa.dao.DaoRegistry;
+import ca.uhn.fhir.jpa.dao.IFhirResourceDao;
 import ca.uhn.fhir.rest.annotation.*;
 import org.hl7.fhir.r4.model.*;
-import org.hl7.fhir.r4.model.Goal.GoalLifecycleStatus;
 
-import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 
-import org.hl7.fhir.r4.model.GuidanceResponse.GuidanceResponseStatus;
+import org.hl7.fhir.r4.model.Task.TaskStatus;
+import org.hl7.fhir.r4.model.CarePlan.CarePlanStatus;
+import org.opencds.cqf.r4.managers.ERSDTaskManager;
 import org.hl7.fhir.exceptions.FHIRException;
 
 public class CarePlanProvider {
 
-    @Operation(name = "$execute", idempotent = true, type = CarePlan.class)
-    public void execute(@IdParam IdType theId, @OperationParam(name = "carePlan") CarePlan carePlan,
-    @OperationParam(name = "endpoint") Endpoint endpoint, @RequiredParam(name = "subject") String patientId) throws FHIRException {
+    private FhirContext fhirContext;
+    private IFhirResourceDao<Task> taskDao;
+    private IFhirResourceDao<CarePlan> carePlanDao;
+
+    public CarePlanProvider(FhirContext fhirContext, DaoRegistry registry) {
+        this.fhirContext = fhirContext;
+        taskDao = registry.getResourceDao(Task.class);
+        carePlanDao = registry.getResourceDao(CarePlan.class);
+    }
+
+    @Operation(name = "$execute", type = CarePlan.class)
+    public CarePlan execute(@OperationParam(name = "carePlan", min = 1, max = 1, type = CarePlan.class) CarePlan carePlan,
+    @OperationParam(name = "dataEndpoint", type = Endpoint.class) Endpoint dataEndpoint, @RequiredParam(name = "subject") String patientId,
+    @OperationParam(name = "parameters", type = Parameters.class) Parameters parameters) throws FHIRException {
+
+        //Save CarePlan to DB
+        carePlanDao.update(carePlan);
+        carePlan.setStatus(CarePlanStatus.ACTIVE);
+        carePlanDao.update(carePlan);
 
         List<Resource> containedResources = carePlan.getContained();
         containedResources.forEach(task -> forContained(task));
+        System.out.println("Tasks scheduled. ");
+        return carePlan;
     }
 
     private void forContained(Resource resource) {
+        resource.setId(resource.getIdElement().getIdPart().replaceAll("#", ""));
         switch (resource.fhirType()) {
-            case "Task": scheduleTask(resource); break;
+            case "Task": 
+                //schedule Tasks
+                scheduleTask((Task)resource); 
+                //Save Tasks to DB 
+                taskDao.update((Task)resource);break;
             default : 
                 throw new FHIRException("Unkown Fhir Resource. " + resource.getId());
         }
 
     }
 
-    private void scheduleTask(Resource task) {
-        System.out.println("Task " + task.getId() + " scheduled.");
+    private void scheduleTask(Task task) {
+        task.setStatus(TaskStatus.INPROGRESS);
+        System.out.println("Task " + task.getIdElement().getIdPart() + " scheduled.");
     }
 
-    @Operation(name = "$taskApply", idempotent = true, type = Task.class)
-    public GuidanceResponse taskApply(@IdParam IdType theId, @OperationParam(name = "task") Task task, @RequiredParam(name = "subject") String patientId) throws InstantiationException {
-
+    @Operation(name = "$taskApply", type = Task.class)
+    public Resource taskApply(@OperationParam(name = "task") Task task, @RequiredParam(name = "subject") String patientId) throws InstantiationException {
+        ERSDTaskManager ersdTaskManager = new ERSDTaskManager();
         GuidanceResponse guidanceResponse = new GuidanceResponse();
-        String taskId = task.getId();        
+        String taskId = task.getIdElement().getIdPart();        
         guidanceResponse.setId("guidanceResponse-" + taskId);
-        switch (taskId) {
-            case ("task-rulefilter-report") : fillGuidanceResponse(guidanceResponse, taskId, patientId); break;
-            case ("task-create-eicr") : executeCreateEICR(guidanceResponse, taskId, patientId); break;
-            case ("task-periodic-update-eicr") : updateEICR(guidanceResponse, taskId, patientId); break;
-            case ("task-close-out-eicr") : closeOutEICR(guidanceResponse, taskId, patientId); break;
-            default : throw new InstantiationException("Unknown task Apply type.");
+        Resource result = ersdTaskManager.forTask(taskId, guidanceResponse, patientId);
+        resolveStatusAndUpdate(task);
+        return result;
+
+    }
+
+    private void resolveStatusAndUpdate(Task task) {
+        task.setStatus(TaskStatus.COMPLETED);
+        taskDao.update(task);
+        List<Reference> basedOnReferences = task.getBasedOn();
+        List<CarePlan> carePlansAssociatedWithTask = new LinkedList<CarePlan>();
+        basedOnReferences.stream()
+            .filter(reference -> reference.getReference().contains("CarePlan/"))
+            .map(reference -> carePlanDao.read(new IdType(reference.getReference())))
+            .forEach(carePlan -> carePlansAssociatedWithTask.add((CarePlan)carePlan));
+
+        for (CarePlan carePlan : carePlansAssociatedWithTask) {
+            List<Task> carePlanTasks = new LinkedList<Task>();
+            carePlan.getContained().stream()
+                .filter(resource -> (resource instanceof Task))
+                .map(resource -> (Task)resource)
+                .forEach(containedTask -> carePlanTasks.add(containedTask));
+            boolean allTasksCompleted = true;
+            for (Task containedTask : carePlanTasks) {
+                containedTask.setId(containedTask.getIdElement().getIdPart().replaceAll("#", ""));
+                containedTask = taskDao.read(containedTask.getIdElement());
+                if(containedTask.getStatus() != TaskStatus.COMPLETED) {
+                    allTasksCompleted = false;
+                }
+                carePlanDao.update(carePlan);
+            }
+            if(allTasksCompleted) {
+                carePlan.setStatus(CarePlanStatus.COMPLETED);
+                carePlanDao.update(carePlan);
+            }
         }
-        return guidanceResponse;
-
-    }
-
-    private Resource executeCreateEICR(GuidanceResponse guidanceResponse, String taskId, String patientId) {
-        Goal eicr = new Goal();
-        eicr.setId("example-eicr");
-        eicr.setLifecycleStatus(GoalLifecycleStatus.ONHOLD);
-        List<Annotation> notes = new ArrayList<Annotation>();
-        Annotation createEICRNote = new Annotation();
-        Annotation postEICRNote = new Annotation();
-        Annotation grabEndpointNote = new Annotation();
-        createEICRNote.addChild("create eICR using eICR Service.");
-        notes.add(createEICRNote);
-        postEICRNote.addChild("Post eICR.");
-        notes.add(createEICRNote);
-        grabEndpointNote.addChild("Grab EHR data endpoint needed to create eICR.");
-        notes.add(grabEndpointNote);
-        eicr.setNote(notes);
-        fillGuidanceResponse(guidanceResponse, taskId, patientId);
-        return eicr;
-    }
-
-    private Resource updateEICR(GuidanceResponse guidanceResponse, String taskId, String patientId) {
-        return executeCreateEICR(guidanceResponse, taskId, patientId);
-    }
-
-    private void closeOutEICR(GuidanceResponse guidanceResponse, String taskId, String patientId) {
-        fillGuidanceResponse(guidanceResponse, taskId, patientId);
-        System.out.println("eICR closed out.");
-    }
-
-    private GuidanceResponse fillGuidanceResponse(GuidanceResponse guidanceResponse, String taskId, String patientId) {
-        Reference subjectReference = new Reference(); subjectReference.setReference(patientId);
-        guidanceResponse.setSubject(subjectReference);
-        guidanceResponse.setStatus(GuidanceResponseStatus.SUCCESS);
-        Annotation resultNote = new Annotation();
-        resultNote.addChild(taskId + " applied.");
-        guidanceResponse.addNote(resultNote);
-        return guidanceResponse;
+        taskDao.update(task);
     }
 
 }
