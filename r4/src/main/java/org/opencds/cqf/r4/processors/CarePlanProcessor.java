@@ -34,9 +34,14 @@ public class CarePlanProcessor {
         This is similar to the cqf-tooling separation of Processing and Operations
     */
     public CarePlan execute(CarePlan carePlan, Endpoint dataEndpoint, String patientId, Parameters parameters) {
-        //Save CarePlan to DB
+        if(dataEndpoint == null) {
+            dataEndpoint = new Endpoint();
+            dataEndpoint.setAddress("http://localhost:8080/cqf-ruler-r4/fhir/");
+        }
+        
         //TODO: if endpoint does not already exist PUT it
         Endpoint carePlanEndpoint = endpointDao.read(dataEndpoint.getIdElement());
+        //Save CarePlan to DB
         workFlowClient = ClientHelper.getClient(fhirContext, carePlanEndpoint);
         workFlowClient.update().resource(carePlan).execute();
         carePlan.setStatus(CarePlanStatus.ACTIVE);
