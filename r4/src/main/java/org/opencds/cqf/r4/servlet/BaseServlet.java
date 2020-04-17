@@ -223,7 +223,7 @@ public class BaseServlet extends RestfulServer {
         this.registerProvider(measureProvider);
 
         // // ActivityDefinition processing
-        ActivityDefinitionApplyProvider actDefProvider = new ActivityDefinitionApplyProvider(this.fhirContext, cql, this.getDao(ActivityDefinition.class));
+        ActivityDefinitionApplyProvider actDefProvider = new ActivityDefinitionApplyProvider(this.fhirContext, registry, cql);
         this.registerProvider(actDefProvider);
 
         JpaFhirRetrieveProvider localSystemRetrieveProvider = new JpaFhirRetrieveProvider(registry, new SearchParameterResolver(this.fhirContext));
