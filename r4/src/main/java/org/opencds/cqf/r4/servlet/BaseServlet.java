@@ -9,14 +9,12 @@ import javax.servlet.ServletException;
 import com.alphora.cql.service.factory.DataProviderFactory;
 
 import org.hl7.fhir.instance.model.api.IBaseResource;
-import org.hl7.fhir.r4.model.ActivityDefinition;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.CodeSystem;
 import org.hl7.fhir.r4.model.Endpoint;
 import org.hl7.fhir.r4.model.Library;
 import org.hl7.fhir.r4.model.Measure;
 import org.hl7.fhir.r4.model.Meta;
-import org.hl7.fhir.r4.model.PlanDefinition;
 import org.hl7.fhir.r4.model.ValueSet;
 import org.opencds.cqf.common.config.HapiProperties;
 import org.opencds.cqf.common.factories.DefaultDataProviderFactory;
@@ -225,19 +223,19 @@ public class BaseServlet extends RestfulServer {
         this.registerProvider(measureProvider);
 
         // // ActivityDefinition processing
-        ActivityDefinitionApplyProvider actDefProvider = new ActivityDefinitionApplyProvider(this.fhirContext, cql, this.getDao(ActivityDefinition.class));
+        ActivityDefinitionApplyProvider actDefProvider = new ActivityDefinitionApplyProvider(this.fhirContext, registry, cql);
         this.registerProvider(actDefProvider);
 
         JpaFhirRetrieveProvider localSystemRetrieveProvider = new JpaFhirRetrieveProvider(registry, new SearchParameterResolver(this.fhirContext));
 
         // PlanDefinition processing
-        PlanDefinitionApplyProvider planDefProvider = new PlanDefinitionApplyProvider(this.fhirContext, actDefProvider, this.getDao(PlanDefinition.class), this.getDao(ActivityDefinition.class), cql);
+        PlanDefinitionApplyProvider planDefProvider = new PlanDefinitionApplyProvider(this.fhirContext, actDefProvider, registry, cql);
         this.registerProvider(planDefProvider);
 
         CarePlanProvider carePlanProvider = new CarePlanProvider(this.fhirContext, registry);
         this.registerProvider(carePlanProvider);
 
-        CdsHooksServlet.setPlanDefinitionProvider(planDefProvider);
+        CdsHooksServlet.setPlanDefinitionProvider(planDefProvider.getProcessor());
         CdsHooksServlet.setLibraryResolutionProvider(libraryProvider);
         CdsHooksServlet.setSystemTerminologyProvider(localSystemTerminologyProvider);
         CdsHooksServlet.setSystemRetrieveProvider(localSystemRetrieveProvider);
