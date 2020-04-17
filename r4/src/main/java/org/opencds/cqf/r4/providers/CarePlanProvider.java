@@ -4,6 +4,8 @@ import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.jpa.dao.DaoRegistry;
 import ca.uhn.fhir.jpa.dao.IFhirResourceDao;
 import ca.uhn.fhir.rest.annotation.*;
+import ca.uhn.fhir.rest.client.api.IGenericClient;
+
 import org.hl7.fhir.r4.model.*;
 
 import java.util.LinkedList;
@@ -11,6 +13,7 @@ import java.util.List;
 
 import org.hl7.fhir.r4.model.Task.TaskStatus;
 import org.hl7.fhir.r4.model.CarePlan.CarePlanStatus;
+import org.opencds.cqf.common.helpers.ClientHelper;
 import org.opencds.cqf.r4.managers.ERSDTaskManager;
 import org.hl7.fhir.exceptions.FHIRException;
 
@@ -19,11 +22,14 @@ public class CarePlanProvider {
     private FhirContext fhirContext;
     private IFhirResourceDao<Task> taskDao;
     private IFhirResourceDao<CarePlan> carePlanDao;
+    private IFhirResourceDao<Endpoint> endpointDao;
+    private IGenericClient workFlowClient;
 
     public CarePlanProvider(FhirContext fhirContext, DaoRegistry registry) {
         this.fhirContext = fhirContext;
         taskDao = registry.getResourceDao(Task.class);
         carePlanDao = registry.getResourceDao(CarePlan.class);
+        endpointDao = registry.getResourceDao(Endpoint.class);
     }
 
     @Operation(name = "$execute", type = CarePlan.class)
@@ -32,9 +38,12 @@ public class CarePlanProvider {
     @OperationParam(name = "parameters", type = Parameters.class) Parameters parameters) throws FHIRException {
 
         //Save CarePlan to DB
-        carePlanDao.update(carePlan);
+        //TODO: if endpoint does not already exist PUT it
+        Endpoint carePlanEndpoint = endpointDao.read(dataEndpoint.getIdElement());
+        workFlowClient = ClientHelper.getClient(fhirContext, carePlanEndpoint);
+        workFlowClient.update().resource(carePlan).execute();
         carePlan.setStatus(CarePlanStatus.ACTIVE);
-        carePlanDao.update(carePlan);
+        workFlowClient.update().resource(carePlan).execute();
 
         List<Resource> containedResources = carePlan.getContained();
         containedResources.forEach(task -> forContained(task));
@@ -49,7 +58,7 @@ public class CarePlanProvider {
                 //schedule Tasks
                 scheduleTask((Task)resource); 
                 //Save Tasks to DB 
-                taskDao.update((Task)resource);break;
+                workFlowClient.update().resource((Task)resource).execute(); break;
             default : 
                 throw new FHIRException("Unkown Fhir Resource. " + resource.getId());
         }
@@ -75,7 +84,7 @@ public class CarePlanProvider {
 
     private void resolveStatusAndUpdate(Task task) {
         task.setStatus(TaskStatus.COMPLETED);
-        taskDao.update(task);
+        workFlowClient.update().resource(task).execute();
         List<Reference> basedOnReferences = task.getBasedOn();
         List<CarePlan> carePlansAssociatedWithTask = new LinkedList<CarePlan>();
         basedOnReferences.stream()
@@ -96,14 +105,14 @@ public class CarePlanProvider {
                 if(containedTask.getStatus() != TaskStatus.COMPLETED) {
                     allTasksCompleted = false;
                 }
-                carePlanDao.update(carePlan);
+                workFlowClient.update().resource(carePlan).execute();
             }
             if(allTasksCompleted) {
                 carePlan.setStatus(CarePlanStatus.COMPLETED);
-                carePlanDao.update(carePlan);
+                workFlowClient.update().resource(carePlan).execute();
             }
         }
-        taskDao.update(task);
+        workFlowClient.update().resource(task).execute();
     }
 
 }
