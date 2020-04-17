@@ -229,10 +229,10 @@ public class BaseServlet extends RestfulServer {
         JpaFhirRetrieveProvider localSystemRetrieveProvider = new JpaFhirRetrieveProvider(registry, new SearchParameterResolver(this.fhirContext));
 
         // PlanDefinition processing
-        PlanDefinitionApplyProvider planDefProvider = new PlanDefinitionApplyProvider(this.fhirContext, actDefProvider, this.getDao(PlanDefinition.class), this.getDao(ActivityDefinition.class), cql);
+        PlanDefinitionApplyProvider planDefProvider = new PlanDefinitionApplyProvider(this.fhirContext, actDefProvider, registry, cql);
         this.registerProvider(planDefProvider);
 
-        CdsHooksServlet.setPlanDefinitionProvider(planDefProvider);
+        CdsHooksServlet.setPlanDefinitionProvider(planDefProvider.getProcessor());
         CdsHooksServlet.setLibraryResolutionProvider(libraryProvider);
         CdsHooksServlet.setSystemTerminologyProvider(localSystemTerminologyProvider);
         CdsHooksServlet.setSystemRetrieveProvider(localSystemRetrieveProvider);
