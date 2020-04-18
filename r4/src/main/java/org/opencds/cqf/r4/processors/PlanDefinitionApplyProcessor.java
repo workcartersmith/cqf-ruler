@@ -24,6 +24,7 @@ import org.hl7.fhir.r4.model.RelatedArtifact;
 import org.hl7.fhir.r4.model.RequestGroup;
 import org.hl7.fhir.r4.model.Resource;
 import org.hl7.fhir.r4.model.StringType;
+import org.hl7.fhir.r4.model.Task;
 import org.hl7.fhir.r4.model.PlanDefinition.ActionRelationshipType;
 import org.hl7.fhir.r4.model.PlanDefinition.PlanDefinitionActionComponent;
 import org.hl7.fhir.r4.model.PlanDefinition.PlanDefinitionActionRelatedActionComponent;
@@ -38,6 +39,7 @@ import org.opencds.cqf.r4.builders.AttachmentBuilder;
 import org.opencds.cqf.r4.builders.CarePlanActivityBuilder;
 import org.opencds.cqf.r4.builders.CarePlanBuilder;
 import org.opencds.cqf.r4.builders.ExtensionBuilder;
+import org.opencds.cqf.r4.builders.IdentifierBuilder;
 import org.opencds.cqf.r4.builders.JavaDateBuilder;
 import org.opencds.cqf.r4.builders.ReferenceBuilder;
 import org.opencds.cqf.r4.builders.RelatedArtifactBuilder;
@@ -100,6 +102,8 @@ public class PlanDefinitionApplyProcessor {
         Session session =
                 new Session(planDefinition, builder, patientId, encounterId, practitionerId,
                         organizationId, userType, userLanguage, userTaskContext, setting, settingContext);
+
+        session.getCarePlan().setId(new IdType("careplan-" + planDefinition.getIdElement().getIdPart().replace("planDefinition-", "").replace("plandefinition-", "")));
 
         return resolveActions(session);
     }
@@ -168,6 +172,11 @@ public class PlanDefinitionApplyProcessor {
                     if (result.getId() == null) {
                         PlanDefinitionApplyProvider.logger.warn("ActivityDefinition %s returned resource with no id, setting one", action.getDefinitionCanonicalType().getId());
                         result.setId( UUID.randomUUID().toString() );
+                    }
+
+                    if (result instanceof Task) {
+                        Task taskResult = (Task)result;
+                        taskResult.addBasedOn(new Reference(session.getCarePlan()));
                     }
                     session.getCarePlanBuilder()
                             .buildContained(result)

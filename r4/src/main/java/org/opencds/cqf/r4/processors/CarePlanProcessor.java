@@ -26,6 +26,7 @@ public class CarePlanProcessor {
     public CarePlanProcessor(FhirContext fhirContext, DaoRegistry registry) {
         this.fhirContext = fhirContext;
         this.endpointDao = registry.getResourceDao(Endpoint.class);
+        workFlowClient = ClientHelper.getClient(fhirContext, new Endpoint().setAddress("http://localhost:8080/cqf-ruler-r4/fhir/"));
     }
 
     /*
@@ -33,16 +34,17 @@ public class CarePlanProcessor {
         if we dont want to expose the operation we can just remove the provider, but still have the functionality
         This is similar to the cqf-tooling separation of Processing and Operations
     */
+    //TODO: add dataEndpoint id parameter for grabbing an endpoint that already exists
     public CarePlan execute(CarePlan carePlan, Endpoint dataEndpoint, String patientId, Parameters parameters) {
         if(dataEndpoint == null) {
             dataEndpoint = new Endpoint();
             dataEndpoint.setAddress("http://localhost:8080/cqf-ruler-r4/fhir/");
         }
-        
-        //TODO: if endpoint does not already exist PUT it
-        Endpoint carePlanEndpoint = endpointDao.read(dataEndpoint.getIdElement());
+        if( dataEndpoint != null) {
+            endpointDao.update(dataEndpoint);
+        }
         //Save CarePlan to DB
-        workFlowClient = ClientHelper.getClient(fhirContext, carePlanEndpoint);
+        workFlowClient = ClientHelper.getClient(fhirContext, dataEndpoint);
         workFlowClient.update().resource(carePlan).execute();
         carePlan.setStatus(CarePlanStatus.ACTIVE);
         workFlowClient.update().resource(carePlan).execute();
@@ -78,24 +80,32 @@ public class CarePlanProcessor {
         This is similar to the cqf-tooling separation of Processing and Operations
     */
     public Resource taskApply(Task task, String patientId) throws InstantiationException {
+        workFlowClient.read().resource(Task.class).withId(task.getIdElement()).execute();
         ERSDTaskManager ersdTaskManager = new ERSDTaskManager();
         GuidanceResponse guidanceResponse = new GuidanceResponse();
         String taskId = task.getIdElement().getIdPart();        
         guidanceResponse.setId("guidanceResponse-" + taskId);
         Resource result = ersdTaskManager.forTask(taskId, guidanceResponse, patientId);
         resolveStatusAndUpdate(task);
-        return result;
+        return result;   
     }
 
     private void resolveStatusAndUpdate(Task task) {
         task.setStatus(TaskStatus.COMPLETED);
         workFlowClient.update().resource(task).execute();
         List<Reference> basedOnReferences = task.getBasedOn();
+        if (basedOnReferences.isEmpty() || basedOnReferences == null) {
+            throw new RuntimeException("Task must fullfill a request in order to be applied. i.e. must have a basedOn element containing a reference to a Resource");
+        }
         List<CarePlan> carePlansAssociatedWithTask = new LinkedList<CarePlan>();
         basedOnReferences.stream()
             .filter(reference -> reference.getReference().contains("CarePlan/"))
             .map(reference -> workFlowClient.read().resource(CarePlan.class).withId(reference.getReference()).execute())
             .forEach(carePlan -> carePlansAssociatedWithTask.add((CarePlan)carePlan));
+        
+        if (basedOnReferences.isEmpty()) {
+            throw new RuntimeException("$taskApply only supports tasks based on CarePlans as of now.");  
+        }
 
         for (CarePlan carePlan : carePlansAssociatedWithTask) {
             List<Task> carePlanTasks = new LinkedList<Task>();
@@ -110,7 +120,6 @@ public class CarePlanProcessor {
                 if(containedTask.getStatus() != TaskStatus.COMPLETED) {
                     allTasksCompleted = false;
                 }
-                workFlowClient.update().resource(carePlan).execute();
             }
             if(allTasksCompleted) {
                 carePlan.setStatus(CarePlanStatus.COMPLETED);
