@@ -18,13 +18,13 @@ import java.util.*;
 
 public class ActivityDefinitionApplyProcessor {
 
-    private CqlExecutionProvider cqlExecutionProvider;
+    private CqlExecutionProcessor cqlExecutionProcessor;
     private ModelResolver modelResolver;
     private IFhirResourceDao<ActivityDefinition> activityDefinitionDao;
 
-    public ActivityDefinitionApplyProcessor(FhirContext fhirContext, DaoRegistry registry, CqlExecutionProvider cqlExecutionProvider) {
+    public ActivityDefinitionApplyProcessor(FhirContext fhirContext, DaoRegistry registry, CqlExecutionProcessor cqlExecutionProcessor) {
         this.modelResolver = new R4FhirModelResolver();
-        this.cqlExecutionProvider = cqlExecutionProvider;
+        this.cqlExecutionProcessor = cqlExecutionProcessor;
         this.activityDefinitionDao = registry.getResourceDao(ActivityDefinition.class);
     }
 
@@ -102,7 +102,7 @@ public class ActivityDefinitionApplyProcessor {
                  * have the libraries, but perhaps the "context" here should be the result
                  * resource?
                  */
-                Object value = cqlExecutionProvider.evaluateInContext(activityDefinition,
+                Object value = cqlExecutionProcessor.evaluateInContext(activityDefinition,
                         dynamicValue.getExpression().getExpression(), patientId);
 
                 // TODO need to verify type... yay
@@ -138,7 +138,7 @@ public class ActivityDefinitionApplyProcessor {
             TaskRestrictionComponent restrictionComponent = new TaskRestrictionComponent();
             if (activityDefinition.hasTimingTiming()) {
                 Extension timingExtension = new Extension();
-                timingExtension.setUrl("http://hl7.org/fhir/us/qicore/StructureDefinition/ersd-timing");
+                timingExtension.setUrl("http://hl7.org/fhir/us/qicore/StructureDefinition/ersd-taskTiming");
                 timingExtension.setValue(activityDefinition.getTiming());
                 restrictionComponent.addExtension(timingExtension);
                 restrictionComponent.setRepetitions(activityDefinition.getTimingTiming().getRepeat().getFrequency());
@@ -147,6 +147,7 @@ public class ActivityDefinitionApplyProcessor {
                 Calendar calendar = Calendar.getInstance();
                 calendar.setTimeZone(TimeZone.getTimeZone("UTC"));
                 Period period = new Period();
+                //TODO: should be based on Encounter
                 period.setStart(calendar.getTime());
                 period.setEnd(DateHelper.increaseCurrentDate(activityDefinition.getTimingDuration().getUnit(), activityDefinition.getTimingDuration().getValue()));
                 restrictionComponent.setPeriod(period);

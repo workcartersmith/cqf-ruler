@@ -17,7 +17,7 @@ public class ActivityDefinitionApplyProvider {
     private ActivityDefinitionApplyProcessor activityDefinitionApplyProcessor;
 
     public ActivityDefinitionApplyProvider(FhirContext fhirContext, DaoRegistry registry, CqlExecutionProvider cqlExecutionProvider) {
-        activityDefinitionApplyProcessor = new ActivityDefinitionApplyProcessor(fhirContext, registry, cqlExecutionProvider);
+        activityDefinitionApplyProcessor = new ActivityDefinitionApplyProcessor(fhirContext, registry, cqlExecutionProvider.getProcessor());
     }
 
     @Operation(name = "$apply", idempotent = true, type = ActivityDefinition.class)
@@ -40,4 +40,8 @@ public class ActivityDefinitionApplyProvider {
             String practitionerId, String organizationId) throws FHIRException {
                 return activityDefinitionApplyProcessor.resolveActivityDefinition(activityDefinition, patientId, practitionerId, organizationId);
     }
+
+    public ActivityDefinitionApplyProcessor getProcessor() {
+		return activityDefinitionApplyProcessor;
+	}  
 }

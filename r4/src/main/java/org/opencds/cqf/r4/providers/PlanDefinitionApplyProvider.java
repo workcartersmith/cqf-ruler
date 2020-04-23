@@ -29,13 +29,14 @@ public class PlanDefinitionApplyProvider {
 
     public PlanDefinitionApplyProvider(FhirContext fhirContext, ActivityDefinitionApplyProvider activitydefinitionApplyProvider, DaoRegistry registry,
     CqlExecutionProvider executionProvider) {
-        planDefinitionApplyProcessor = new PlanDefinitionApplyProcessor(fhirContext, activitydefinitionApplyProvider, registry, executionProvider);
+        planDefinitionApplyProcessor = new PlanDefinitionApplyProcessor(fhirContext, activitydefinitionApplyProvider.getProcessor(), registry, executionProvider.getProcessor());
     }
 
     @Operation(name = "$apply", idempotent = true, type = PlanDefinition.class)
     public CarePlan applyPlanDefinition(
             @IdParam IdType theId,
             @RequiredParam(name="patient") String patientId,
+            //TimeZone should be based on Encounter
             @OptionalParam(name="encounter") String encounterId,
             @OptionalParam(name="practitioner") String practitionerId,
             @OptionalParam(name="organization") String organizationId,

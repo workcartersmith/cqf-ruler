@@ -1,7 +1,9 @@
 package org.opencds.cqf.r4.servlet;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import javax.servlet.ServletException;
@@ -25,17 +27,7 @@ import org.opencds.cqf.measure.r4.CodeTerminologyRef;
 import org.opencds.cqf.measure.r4.CqfMeasure;
 import org.opencds.cqf.measure.r4.PopulationCriteriaMap;
 import org.opencds.cqf.measure.r4.VersionedTerminologyRef;
-import org.opencds.cqf.r4.providers.ActivityDefinitionApplyProvider;
-import org.opencds.cqf.r4.providers.ApplyCqlOperationProvider;
-import org.opencds.cqf.r4.providers.CacheValueSetsProvider;
-import org.opencds.cqf.r4.providers.CarePlanProvider;
-import org.opencds.cqf.r4.providers.CodeSystemUpdateProvider;
-import org.opencds.cqf.r4.providers.CqlExecutionProvider;
-import org.opencds.cqf.r4.providers.HQMFProvider;
-import org.opencds.cqf.r4.providers.JpaTerminologyProvider;
-import org.opencds.cqf.r4.providers.LibraryOperationsProvider;
-import org.opencds.cqf.r4.providers.MeasureOperationsProvider;
-import org.opencds.cqf.r4.providers.PlanDefinitionApplyProvider;
+import org.opencds.cqf.r4.providers.*;
 import org.springframework.context.ApplicationContext;
 import org.springframework.web.cors.CorsConfiguration;
 
@@ -60,6 +52,7 @@ import ca.uhn.fhir.rest.server.HardcodedServerAddressStrategy;
 import ca.uhn.fhir.rest.server.RestfulServer;
 import ca.uhn.fhir.rest.server.interceptor.CorsInterceptor;
 import ca.uhn.fhir.rest.server.interceptor.ResponseHighlighterInterceptor;
+import org.hl7.fhir.r4.model.*;
 
 public class BaseServlet extends RestfulServer {
     DaoRegistry registry;
@@ -158,6 +151,8 @@ public class BaseServlet extends RestfulServer {
             setServerAddressStrategy(new HardcodedServerAddressStrategy(serverAddress));
         }
 
+        initializeLocalEndpoint(registry);
+
         registerProvider(appCtx.getBean(TerminologyUploaderProvider.class));
 
         if (HapiProperties.getCorsEnabled())
@@ -235,10 +230,55 @@ public class BaseServlet extends RestfulServer {
         CarePlanProvider carePlanProvider = new CarePlanProvider(this.fhirContext, registry);
         this.registerProvider(carePlanProvider);
 
+        TaskProvider taskProvider = new TaskProvider(this.fhirContext, registry);
+        this.registerProvider(taskProvider);
+
+        // Notify *not yet ready*
+        NotifyProvider notifyProvider = new NotifyProvider(registry, libraryProvider, dataProviderFactory, fhirContext, localSystemTerminologyProvider);
+        this.registerProvider(notifyProvider);
+
         CdsHooksServlet.setPlanDefinitionProvider(planDefProvider.getProcessor());
         CdsHooksServlet.setLibraryResolutionProvider(libraryProvider);
         CdsHooksServlet.setSystemTerminologyProvider(localSystemTerminologyProvider);
         CdsHooksServlet.setSystemRetrieveProvider(localSystemRetrieveProvider);
+    }
+
+    private void initializeLocalEndpoint(DaoRegistry registry) {
+        Endpoint dataEndpoint = new Endpoint();
+            dataEndpoint.setId("local-endpoint");
+            dataEndpoint.setName("Local Endpoint");
+            //Should make a local Endpoint helper??
+            Coding connectionTypeCoding = new Coding();
+            connectionTypeCoding.setSystem("http://terminology.hl7.org/CodeSystem/endpoint-connection-type");
+            connectionTypeCoding.setCode("hl7-fhir-rest");
+            List<CodeableConcept> payloadTypeCodeableConcepts = new ArrayList<CodeableConcept>();
+            CodeableConcept payloadTypeCodeableConcept = new CodeableConcept();
+            Coding payloadTypeCarePlanCoding = new Coding();
+            payloadTypeCarePlanCoding.setSystem("http://hl7.org/fhir/resource-types");
+            payloadTypeCarePlanCoding.setCode("CarePlan");
+            Coding payloadTypeTaskCoding = new Coding();
+            payloadTypeTaskCoding.setSystem("http://hl7.org/fhir/resource-types");
+            payloadTypeTaskCoding.setCode("Task");
+            Coding payloadTypeLibraryCoding = new Coding();
+            payloadTypeLibraryCoding.setSystem("http://hl7.org/fhir/resource-types");
+            payloadTypeLibraryCoding.setCode("Library");
+            Coding payloadTypeMeasureCoding = new Coding();
+            payloadTypeMeasureCoding.setSystem("http://hl7.org/fhir/resource-types");
+            payloadTypeMeasureCoding.setCode("Measure");
+            Coding payloadTypePlanDefinitionCoding = new Coding();
+            payloadTypePlanDefinitionCoding.setSystem("http://hl7.org/fhir/resource-types");
+            payloadTypePlanDefinitionCoding.setCode("PlanDefinition");
+            payloadTypeCodeableConcept.addCoding(payloadTypeCarePlanCoding);
+            payloadTypeCodeableConcept.addCoding(payloadTypeTaskCoding);
+            payloadTypeCodeableConcept.addCoding(payloadTypeLibraryCoding);
+            payloadTypeCodeableConcept.addCoding(payloadTypeMeasureCoding);
+            payloadTypeCodeableConcept.addCoding(payloadTypePlanDefinitionCoding);
+            payloadTypeCodeableConcepts.add(payloadTypeCodeableConcept);
+
+            dataEndpoint.setConnectionType(connectionTypeCoding);
+            dataEndpoint.setPayloadType(payloadTypeCodeableConcepts);
+            dataEndpoint.setAddress(HapiProperties.getServerAddress());
+            registry.getResourceDao(Endpoint.class).update(dataEndpoint);
     }
 
     protected <T extends IBaseResource> IFhirResourceDao<T> getDao(Class<T> clazz) {

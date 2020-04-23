@@ -39,15 +39,12 @@ import org.opencds.cqf.r4.builders.AttachmentBuilder;
 import org.opencds.cqf.r4.builders.CarePlanActivityBuilder;
 import org.opencds.cqf.r4.builders.CarePlanBuilder;
 import org.opencds.cqf.r4.builders.ExtensionBuilder;
-import org.opencds.cqf.r4.builders.IdentifierBuilder;
 import org.opencds.cqf.r4.builders.JavaDateBuilder;
 import org.opencds.cqf.r4.builders.ReferenceBuilder;
 import org.opencds.cqf.r4.builders.RelatedArtifactBuilder;
 import org.opencds.cqf.r4.builders.RequestGroupActionBuilder;
 import org.opencds.cqf.r4.builders.RequestGroupBuilder;
 import org.opencds.cqf.r4.helpers.CanonicalHelper;
-import org.opencds.cqf.r4.providers.ActivityDefinitionApplyProvider;
-import org.opencds.cqf.r4.providers.CqlExecutionProvider;
 import org.opencds.cqf.r4.providers.PlanDefinitionApplyProvider;
 
 import ca.uhn.fhir.context.FhirContext;
@@ -57,16 +54,16 @@ import ca.uhn.fhir.rest.client.api.IGenericClient;
 
 public class PlanDefinitionApplyProcessor {
 
-    private CqlExecutionProvider executionProvider;
+    private CqlExecutionProcessor executionProcessor;
     private ModelResolver modelResolver;
-    private ActivityDefinitionApplyProvider activityDefinitionApplyProvider;
+    private ActivityDefinitionApplyProcessor activityDefinitionApplyProcessor;
     private IGenericClient artifactClient;
     private FhirContext fhirContext;
 
-    public PlanDefinitionApplyProcessor(FhirContext fhirContext, ActivityDefinitionApplyProvider activitydefinitionApplyProvider, DaoRegistry registry, CqlExecutionProvider executionProvider) {
-        this.executionProvider = executionProvider;
+    public PlanDefinitionApplyProcessor(FhirContext fhirContext, ActivityDefinitionApplyProcessor activityDefinitionApplyProcessor, DaoRegistry registry, CqlExecutionProcessor executionProcessor) {
+        this.executionProcessor = executionProcessor;
         this.modelResolver = new R4FhirModelResolver();
-        this.activityDefinitionApplyProvider = activitydefinitionApplyProvider;
+        this.activityDefinitionApplyProcessor = activityDefinitionApplyProcessor;
         this.fhirContext = fhirContext;
     }
 
@@ -148,14 +145,14 @@ public class PlanDefinitionApplyProcessor {
                 Resource result;
                 try {
                     if (action.getDefinitionCanonicalType().getValue().startsWith("#")) {
-                        result = this.activityDefinitionApplyProvider.resolveActivityDefinition(
+                        result = this.activityDefinitionApplyProcessor.resolveActivityDefinition(
                                 (ActivityDefinition) resolveContained(session.getPlanDefinition(),
                                         action.getDefinitionCanonicalType().getValue()),
                                 session.getPatientId(), session.getPractionerId(), session.getOrganizationId()
                         );
                     }
                     else {
-                        result = this.activityDefinitionApplyProvider.apply(
+                        result = this.activityDefinitionApplyProcessor.apply(
                                 new IdType(CanonicalHelper.getId(action.getDefinitionCanonicalType())),
                                 session.getPatientId(),
                                 session.getEncounterId(),
@@ -198,7 +195,7 @@ public class PlanDefinitionApplyProcessor {
             PlanDefinitionApplyProvider.logger.info("Resolving dynamic value %s %s", dynamicValue.getPath(), dynamicValue.getExpression());
             if (dynamicValue.hasExpression()) {
                 Object result =
-                        executionProvider
+                        executionProcessor
                                 .evaluateInContext(session.getPlanDefinition(), dynamicValue.getExpression().getExpression(), session.getPatientId());
 
                 if (dynamicValue.hasPath() && dynamicValue.getPath().equals("$this"))
@@ -255,9 +252,9 @@ public class PlanDefinitionApplyProcessor {
                 Object result = null;
                 result = (language.equals("text/cql.name")) 
                 ?
-                    executionProvider.evaluateInContext(session.getPlanDefinition(), cql, session.getPatientId(), true)
+                    executionProcessor.evaluateInContext(session.getPlanDefinition(), cql, session.getPatientId(), true)
                 : 
-                    executionProvider.evaluateInContext(session.getPlanDefinition(), cql, session.getPatientId());
+                    executionProcessor.evaluateInContext(session.getPlanDefinition(), cql, session.getPatientId());
 
                 if (result == null) {
                     PlanDefinitionApplyProvider.logger.warn("Expression Returned null");
@@ -387,7 +384,7 @@ public class PlanDefinitionApplyProcessor {
                             }
                             Resource resource;
                             try {
-                                resource = this.activityDefinitionApplyProvider.apply(
+                                resource = this.activityDefinitionApplyProcessor.apply(
                                         new IdType(action.getDefinitionCanonicalType().getId()), patientId,
                                         null, null, null, null,
                                         null, null, null, null

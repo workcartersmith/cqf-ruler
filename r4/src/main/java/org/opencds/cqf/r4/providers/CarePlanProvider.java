@@ -23,9 +23,4 @@ public class CarePlanProvider {
     @OperationParam(name = "parameters", type = Parameters.class) Parameters parameters) throws FHIRException {
         return carePlanProcessor.execute(carePlan, dataEndpoint, patientId, parameters);
     }
-
-    @Operation(name = "$taskApply", type = Task.class)
-    public Resource taskApply(@OperationParam(name = "task") Task task, @RequiredParam(name = "subject") String patientId) throws InstantiationException {
-        return carePlanProcessor.taskApply(task, patientId);
-    }
 }
