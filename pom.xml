@@ -69,26 +69,26 @@
     </properties>
     <distributionManagement>
         <snapshotRepository>
-            <id>nexus</id>
-            <url>repo.alphora.com:8081/repository/maven-snapshots/</url>
+            <id>ossrh</id>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
         </snapshotRepository>
 
         <repository>
-            <id>nexus</id>
-            <url>repo.alphora.com:8081/repository/maven-central/</url>
+            <id>ossrh</id>
+            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
         </repository>
     </distributionManagement>
     <repositories>
         <repository>
             <id>maven-snapshots</id>
-            <url>repo.alphora.com:8081/repository/maven-snapshots/</url>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
             <snapshots>
                 <enabled>true</enabled>
             </snapshots>
         </repository>
         <repository>
             <id>maven-public</id>
-            <url>repo.alphora.com:8081/repository/maven-public/</url>
+            <url>https://oss.sonatype.org/content/groups/public/</url>
         </repository>
     </repositories>
 
