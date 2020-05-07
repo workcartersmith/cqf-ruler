@@ -10,19 +10,23 @@ import org.hl7.fhir.r4.model.GuidanceResponse.GuidanceResponseStatus;
 
 public class ERSDTaskManager {
 
-    public Resource forTask(String taskId, GuidanceResponse guidanceResponse, String patientId) throws InstantiationException {
+    public Resource forTask(Task task, GuidanceResponse guidanceResponse) throws InstantiationException {
         Resource resource = null;
-        switch (taskId) {
-            case ("task-rulefilter-report") : resource = fillGuidanceResponse(guidanceResponse, taskId, patientId); break;
-            case ("task-create-eicr") : resource = executeCreateEICR(guidanceResponse, taskId, patientId); break;
-            case ("task-periodic-update-eicr") : resource = updateEICR(guidanceResponse, taskId, patientId); break;
-            case ("task-close-out-eicr") : resource = closeOutEICR(guidanceResponse, taskId, patientId); break;
-            default : throw new InstantiationException("Unknown task Apply type.");
-        }
+        //Cant use taskCode
+        for (Coding coding : task.getCode().getCoding()) {
+            switch (coding.getCode()) {
+                //these need to be codes
+                case ("task-rulefilter-report") : resource = fillGuidanceResponse(guidanceResponse, coding.getCode()); break;
+                case ("task-create-eicr") : resource = executeCreateEICR(guidanceResponse); break;
+                case ("task-periodic-update-eicr") : resource = updateEICR(guidanceResponse); break;
+                case ("task-close-out-eicr") : resource = closeOutEICR(guidanceResponse, coding.getCode()); break;
+                default : throw new InstantiationException("Unknown task Apply type.");
+            }
+        } 
         return resource;
     }
 
-    private Goal executeCreateEICR(GuidanceResponse guidanceResponse, String taskId, String patientId) {
+    private Goal executeCreateEICR(GuidanceResponse guidanceResponse) {
         Goal eicr = new Goal();
         eicr.setId("example-eicr");
         eicr.setLifecycleStatus(GoalLifecycleStatus.ONHOLD);
@@ -40,7 +44,7 @@ public class ERSDTaskManager {
         return eicr;
     }
 
-    private Resource updateEICR(GuidanceResponse guidanceResponse, String taskId, String patientId) {
+    private Resource updateEICR(GuidanceResponse guidanceResponse) {
         Goal eicr = new Goal();
         eicr.setId("example-eicr");
         eicr.setLifecycleStatus(GoalLifecycleStatus.ONHOLD);
@@ -53,24 +57,22 @@ public class ERSDTaskManager {
         return eicr;
     }
 
-    private Resource closeOutEICR(GuidanceResponse guidanceResponse, String taskId, String patientId) {
+    private Resource closeOutEICR(GuidanceResponse guidanceResponse, String taskCode) {
         System.out.println("eICR closed out.");
-        return fillGuidanceResponse(guidanceResponse, taskId, patientId, null);
+        return fillGuidanceResponse(guidanceResponse, taskCode, null);
     }
 
-    private GuidanceResponse fillGuidanceResponse(GuidanceResponse guidanceResponse, String taskId, String patientId, Resource resource) {
+    private GuidanceResponse fillGuidanceResponse(GuidanceResponse guidanceResponse, String taskCode, Resource resource) {
         if (resource != null) {
             guidanceResponse.addContained(resource);
         }
-        return fillGuidanceResponse(guidanceResponse, taskId, patientId);
+        return fillGuidanceResponse(guidanceResponse, taskCode);
     }
 
-    private GuidanceResponse fillGuidanceResponse(GuidanceResponse guidanceResponse, String taskId, String patientId) {
-        Reference subjectReference = new Reference(); subjectReference.setReference(patientId);
-        guidanceResponse.setSubject(subjectReference);
+    private GuidanceResponse fillGuidanceResponse(GuidanceResponse guidanceResponse, String taskCode) {
         guidanceResponse.setStatus(GuidanceResponseStatus.SUCCESS);
         Annotation resultNote = new Annotation();
-        resultNote.setText(taskId + " applied.");
+        resultNote.setText(taskCode + " applied.");
         guidanceResponse.addNote(resultNote);
         return guidanceResponse;
     }
