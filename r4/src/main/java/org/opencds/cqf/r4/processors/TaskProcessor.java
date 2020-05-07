@@ -5,6 +5,7 @@ import ca.uhn.fhir.jpa.dao.DaoRegistry;
 import ca.uhn.fhir.jpa.dao.IFhirResourceDao;
 import ca.uhn.fhir.rest.client.api.IGenericClient;
 
+import org.hl7.fhir.instance.model.api.IAnyResource;
 import org.hl7.fhir.r4.model.*;
 
 import java.util.LinkedList;
@@ -13,9 +14,10 @@ import java.util.List;
 import org.hl7.fhir.r4.model.Task.TaskStatus;
 import org.hl7.fhir.r4.model.CarePlan.CarePlanStatus;
 import org.opencds.cqf.common.helpers.ClientHelper;
+import org.opencds.cqf.r4.execution.ITaskProcessor;
 import org.opencds.cqf.r4.managers.ERSDTaskManager;
 
-public class TaskProcessor {
+public class TaskProcessor implements ITaskProcessor<Task> {
 
     private IGenericClient workFlowClient;
     private IFhirResourceDao<Endpoint> endpointDao;
@@ -25,18 +27,26 @@ public class TaskProcessor {
         workFlowClient = ClientHelper.getClient(fhirContext, endpointDao.read(new IdType("local-endpoint")));
     }
 
-    public Resource taskExecute(Task task, String patientId) throws InstantiationException {
+    public IAnyResource execute(Task task) {
         workFlowClient.read().resource(Task.class).withId(task.getIdElement()).execute();
         ERSDTaskManager ersdTaskManager = new ERSDTaskManager();
         GuidanceResponse guidanceResponse = new GuidanceResponse();
-        String taskId = task.getIdElement().getIdPart();        
+        String taskId = task.getIdElement().getIdPart();
         guidanceResponse.setId("guidanceResponse-" + taskId);
-        Resource result = ersdTaskManager.forTask(taskId, guidanceResponse, patientId);
+        IAnyResource result = null;
+        try {
+            result = ersdTaskManager.forTask(task, guidanceResponse);
+        } catch (InstantiationException e) {
+            System.out.println("unable to execute Task: " + taskId);
+            e.printStackTrace();
+        }
         resolveStatusAndUpdate(task);
         return result;   
     }
 
     private void resolveStatusAndUpdate(Task task) {
+        //create extension countExecuted to determine completed
+        //or use Timing count compared to event *Ask Bryn whether event is a record or directive*
         task.setStatus(TaskStatus.COMPLETED);
         workFlowClient.update().resource(task).execute();
         List<Reference> basedOnReferences = task.getBasedOn();

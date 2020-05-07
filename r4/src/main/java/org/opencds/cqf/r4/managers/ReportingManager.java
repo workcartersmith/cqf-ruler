@@ -7,11 +7,11 @@ import javax.xml.bind.JAXBException;
 import com.alphora.cql.service.factory.DataProviderFactory;
 
 import org.hl7.fhir.exceptions.FHIRException;
+import org.hl7.fhir.instance.model.api.IAnyResource;
 import org.hl7.fhir.r4.model.Annotation;
 import org.hl7.fhir.r4.model.CarePlan;
 import org.hl7.fhir.r4.model.Endpoint;
 import org.hl7.fhir.r4.model.IdType;
-import org.hl7.fhir.r4.model.Resource;
 import org.hl7.fhir.r4.model.Task;
 import org.opencds.cqf.common.providers.LibraryResolutionProvider;
 import org.opencds.cqf.cql.terminology.TerminologyProvider;
@@ -38,12 +38,15 @@ public class ReportingManager {
     private PlanDefinitionApplyProcessor planDefinitionApplyProcessor;
     private FhirContext fhirContext;
     private DaoRegistry registry;
+    private IFhirResourceDao<Endpoint> endpointDao;
 
     public ReportingManager(FhirContext fhirContext, DaoRegistry registry, LibraryResolutionProvider<org.hl7.fhir.r4.model.Library> libraryResourceProvider,
      DataProviderFactory dataProviderFactory, TerminologyProvider localSystemTerminologyProvider ) {
-        IFhirResourceDao<Endpoint> endpointDao = registry.getResourceDao(Endpoint.class);
+        endpointDao = registry.getResourceDao(Endpoint.class);
+        this.fhirContext = fhirContext;
+        this.registry = registry;
         try {
-            eRSDEndpoint = endpointDao.read(new IdType("endpoint-ERSD"));
+            eRSDEndpoint = endpointDao.read(new IdType("local-endpoint"));
         } catch (Exception e) {
             Endpoint localEndpoint = new Endpoint();
             localEndpoint.setAddress("http://localhost:8080/cqf-ruler-r4/fhir/");
@@ -55,10 +58,10 @@ public class ReportingManager {
         planDefinitionApplyProcessor = new PlanDefinitionApplyProcessor(fhirContext, activityDefinitionApplyProcessor, registry, cqlExecutionProcessor);
     }
 
-    public Resource manage(String eRSDId, String patientId) throws FHIRException, IOException, JAXBException {
+    public IAnyResource manage(String eRSDId, String patientId) throws FHIRException, IOException, JAXBException {
         CarePlan carePlan = applyPlanDefinition(eRSDId, patientId);
         if (carePlan == null || !carePlan.hasStatus() || !carePlan.hasContained() || !carePlan.hasCreated()) {
-            return executeCarePlan(carePlan, patientId);
+            return executeCarePlan(carePlan);
         }
         else {
             Task notReportableTask = new Task();
@@ -73,11 +76,9 @@ public class ReportingManager {
         return planDefinitionApplyProcessor.applyPlanDefinition(new IdType(eRSDId), patientId, null, null, null, null, null, null, null, null, eRSDEndpoint);
     }
 
-    private Resource executeCarePlan(CarePlan carePlan, String patientId) {
+    private IAnyResource executeCarePlan(CarePlan carePlan) {
         CarePlanProcessor carePlanProcessor = new CarePlanProcessor(fhirContext, registry);
-        Endpoint workFlowEndpoint = new Endpoint();
-        workFlowEndpoint.setAddress("http://localhost:8080/cqf-ruler-r4/fhir/");
-        return carePlanProcessor.execute(carePlan, workFlowEndpoint, patientId, null);
+        return carePlanProcessor.execute(carePlan);
     }
 
     //TaskScheduler

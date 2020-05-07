@@ -120,7 +120,6 @@ public class ActivityDefinitionApplyProcessor {
         Task task = new Task();
         task.setId(activityDefinition.getIdElement().getIdPart().replace("activitydefinition-", "task-"));
         task.setStatus(Task.TaskStatus.DRAFT);
-        task.setIntent(Task.TaskIntent.PLAN);
 
         if (activityDefinition.hasCode()) {
             task.setCode(activityDefinition.getCode());
@@ -132,31 +131,7 @@ public class ActivityDefinitionApplyProcessor {
 
         if (activityDefinition.hasDescription()) {
             task.setDescription(activityDefinition.getDescription());
-        }
-
-        if (activityDefinition.hasTiming()) {
-            TaskRestrictionComponent restrictionComponent = new TaskRestrictionComponent();
-            if (activityDefinition.hasTimingTiming()) {
-                Extension timingExtension = new Extension();
-                timingExtension.setUrl("http://hl7.org/fhir/us/qicore/StructureDefinition/ersd-taskTiming");
-                timingExtension.setValue(activityDefinition.getTiming());
-                restrictionComponent.addExtension(timingExtension);
-                restrictionComponent.setRepetitions(activityDefinition.getTimingTiming().getRepeat().getFrequency());
-            }
-            else if (activityDefinition.hasTimingDuration()) {
-                Calendar calendar = Calendar.getInstance();
-                calendar.setTimeZone(TimeZone.getTimeZone("UTC"));
-                Period period = new Period();
-                //TODO: should be based on Encounter
-                period.setStart(calendar.getTime());
-                period.setEnd(DateHelper.increaseCurrentDate(activityDefinition.getTimingDuration().getUnit(), activityDefinition.getTimingDuration().getValue()));
-                restrictionComponent.setPeriod(period);
-            }
-            else if (activityDefinition.hasTimingPeriod()) {
-                restrictionComponent.setPeriod(activityDefinition.getTimingPeriod());
-            }
-            task.setRestriction(restrictionComponent);
-        }
+        }  
         return task;
     }
 

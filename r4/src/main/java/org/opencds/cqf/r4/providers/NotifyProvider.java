@@ -7,6 +7,7 @@ import javax.xml.bind.JAXBException;
 import com.alphora.cql.service.factory.DataProviderFactory;
 
 import org.hl7.fhir.exceptions.FHIRException;
+import org.hl7.fhir.instance.model.api.IAnyResource;
 import org.hl7.fhir.r4.model.Resource;
 import org.opencds.cqf.common.providers.LibraryResolutionProvider;
 import org.opencds.cqf.cql.terminology.TerminologyProvider;
@@ -29,7 +30,7 @@ public class NotifyProvider {
         TODO: add Subscribe functionality
     */
     @Operation(name = "$notify")
-    public Resource applyPlanDefinition(
+    public IAnyResource applyPlanDefinition(
         //should be patient and potentially an Encounter
             @RequiredParam(name="patientId") String patientId,
             @RequiredParam(name="encounterId") String encounterId) throws FHIRException, IOException, JAXBException {

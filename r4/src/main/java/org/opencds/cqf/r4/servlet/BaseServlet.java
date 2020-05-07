@@ -96,6 +96,7 @@ public class BaseServlet extends RestfulServer {
 
         JpaTerminologyProvider localSystemTerminologyProvider = new JpaTerminologyProvider(appCtx.getBean("terminologyService",  ITermReadSvcR4.class), getFhirContext(), (ValueSetResourceProvider)this.getResourceProvider(ValueSet.class));
 
+        initializeLocalEndpoint(registry);
         Map<String, Endpoint> endpointIndex = new HashMap<String, Endpoint>();
         DataProviderFactory dataProviderFactory = new DefaultDataProviderFactory<Endpoint>(registry, fhirContext, endpointIndex, null);
         resolveProviders(dataProviderFactory, localSystemTerminologyProvider, this.registry);
@@ -151,7 +152,6 @@ public class BaseServlet extends RestfulServer {
             setServerAddressStrategy(new HardcodedServerAddressStrategy(serverAddress));
         }
 
-        initializeLocalEndpoint(registry);
 
         registerProvider(appCtx.getBean(TerminologyUploaderProvider.class));
 

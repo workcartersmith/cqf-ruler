@@ -8,6 +8,7 @@ import org.hl7.fhir.r4.model.*;
 
 import org.opencds.cqf.r4.processors.CarePlanProcessor;
 import org.hl7.fhir.exceptions.FHIRException;
+import org.hl7.fhir.instance.model.api.IAnyResource;
 
 public class CarePlanProvider {
 
@@ -18,9 +19,11 @@ public class CarePlanProvider {
     }
 
     @Operation(name = "$execute", type = CarePlan.class)
-    public CarePlan execute(@OperationParam(name = "carePlan", min = 1, max = 1, type = CarePlan.class) CarePlan carePlan,
-    @OperationParam(name = "dataEndpoint", type = Endpoint.class) Endpoint dataEndpoint, @RequiredParam(name = "subject") String patientId,
-    @OperationParam(name = "parameters", type = Parameters.class) Parameters parameters) throws FHIRException {
-        return carePlanProcessor.execute(carePlan, dataEndpoint, patientId, parameters);
+    public IAnyResource execute(@OperationParam(name = "carePlan", min = 1, max = 1, type = CarePlan.class) CarePlan carePlan,
+    @OperationParam(name = "dataEndpoint", type = Endpoint.class) Endpoint dataEndpoint) throws FHIRException {
+        if (dataEndpoint == null) {
+            return carePlanProcessor.execute(carePlan);
+        }
+        return carePlanProcessor.execute(carePlan, dataEndpoint);
     }
 }
