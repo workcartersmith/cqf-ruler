@@ -111,6 +111,9 @@ public class MeasureOperationsProvider {
     public MethodOutcome refreshGeneratedContent(HttpServletRequest theRequest, RequestDetails theRequestDetails,
             @IdParam IdType theId) {
         Measure theResource = this.measureResourceProvider.getDao().read(theId);
+
+        theResource.getRelatedArtifact().removeIf(relatedArtifact -> relatedArtifact.getType().equals(RelatedArtifact.RelatedArtifactType.DEPENDSON));
+
         CqfMeasure cqfMeasure = this.dataRequirementsProvider.createCqfMeasure(theResource, this.libraryResolutionProvider);
 
         // Ensure All Related Artifacts for all referenced Libraries
@@ -267,7 +270,7 @@ public class MeasureOperationsProvider {
     //     return evaluator.evaluatePatientMeasure(seed.getMeasure(), seed.getContext(), "");
     // }
 
-    @Operation(name = "$care-gaps", idempotent = true)
+    @Operation(name = "$care-gaps", idempotent = true, type = Measure.class)
     public Bundle careGapsReport(@RequiredParam(name = "periodStart") String periodStart,
             @RequiredParam(name = "periodEnd") String periodEnd, @RequiredParam(name = "topic") String topic,
             @RequiredParam(name = "patient") String patientRef, @OperationParam(name = "endpoint") Endpoint endpoint) {

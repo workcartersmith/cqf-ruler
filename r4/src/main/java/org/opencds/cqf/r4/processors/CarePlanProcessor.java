@@ -100,6 +100,19 @@ public class CarePlanProcessor implements ICarePlanProcessor<CarePlan> {
                 }
             }
         }
+
+        // TaskJob job = new TaskJob(task);
+        // job.setId("job-" + task.getId());
+
+
+        // try {
+        //     RulerScheduler scheduler = new RulerScheduler(job, "TEST");
+
+        //     scheduler.start();
+        // }catch (SchedulerException e){
+
+        //     e.printStackTrace();
+        // }
         System.out.println("Task " + task.getIdElement().getIdPart() + " scheduled.");
     }
 

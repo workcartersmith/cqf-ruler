@@ -106,6 +106,9 @@ public class MeasureOperationsProcessor {
 
     public MethodOutcome refreshGeneratedContent(HttpServletRequest theRequest, RequestDetails theRequestDetails, IdType theId) {
         Measure theResource = this.measureResourceProvider.getDao().read(theId);
+
+        theResource.getRelatedArtifact().removeIf(relatedArtifact -> relatedArtifact.getType().equals(RelatedArtifact.RelatedArtifactType.DEPENDSON));
+
         CqfMeasure cqfMeasure = this.dataRequirementsProvider.createCqfMeasure(theResource, this.libraryResolutionProvider);
 
         // Ensure All Related Artifacts for all referenced Libraries
@@ -126,13 +129,13 @@ public class MeasureOperationsProcessor {
             }
         }
 
-        try {
+		try {
 			Narrative n = this.narrativeProvider.getNarrative(this.measureResourceProvider.getContext(), cqfMeasure);
 			theResource.setText(n.copy());
 		} catch (Exception e) {
 			//Ignore the exception so the resource still gets updated
-        }
-        
+		}
+
         return this.measureResourceProvider.update(theRequest, theResource, theId,
                 theRequestDetails.getConditionalUrl(RestOperationTypeEnum.UPDATE), theRequestDetails);
     }

@@ -85,7 +85,7 @@ public class MeasureOperationsProvider {
     //     return measureOperationsProcessor.evaluateMeasure(theId, sourceData, periodStart, periodEnd);
     // }
 
-    @Operation(name = "$care-gaps", idempotent = true)
+    @Operation(name = "$care-gaps", idempotent = true, type = Measure.class)
     public Bundle careGapsReport(@RequiredParam(name = "periodStart") String periodStart,
             @RequiredParam(name = "periodEnd") String periodEnd, @RequiredParam(name = "topic") String topic,
             @RequiredParam(name = "patient") String patientRef, @OperationParam(name = "endpoint") Endpoint endpoint) {
@@ -112,7 +112,7 @@ public class MeasureOperationsProvider {
 
     @Operation(name = "$submit-data", idempotent = true, type = Measure.class)
     public Resource submitData(RequestDetails details, @IdParam IdType theId,
-            @OperationParam(name = "measure-report", min = 1, max = 1, type = MeasureReport.class) MeasureReport report,
+            @OperationParam(name = "measurereport", min = 1, max = 1, type = MeasureReport.class) MeasureReport report,
             @OperationParam(name = "resource") List<IAnyResource> resources) {
         /*
          * TODO - resource validation using $data-requirements operation (params are the
