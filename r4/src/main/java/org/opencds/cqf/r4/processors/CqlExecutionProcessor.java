@@ -8,11 +8,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import com.alphora.cql.service.Response;
-import com.alphora.cql.service.Service;
-import com.alphora.cql.service.factory.DataProviderFactory;
+import org.opencds.cqf.cql.service.Response;
+import org.opencds.cqf.cql.service.Service;
+import org.opencds.cqf.cql.service.factory.DataProviderFactory;
 import org.opencds.cqf.common.factories.DefaultTerminologyProviderFactory;
-import com.alphora.cql.service.factory.TerminologyProviderFactory;
+import org.opencds.cqf.cql.service.factory.TerminologyProviderFactory;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.cqframework.cql.cql2elm.CqlTranslator;
@@ -38,12 +38,11 @@ import org.opencds.cqf.common.evaluation.RulerLibraryLoader;
 import org.opencds.cqf.r4.factories.DefaultLibraryLoaderFactory;
 import org.opencds.cqf.common.helpers.TranslatorHelper;
 import org.opencds.cqf.common.providers.LibraryResolutionProvider;
-import org.opencds.cqf.cql.execution.LibraryResult;
 import org.opencds.cqf.r4.helpers.CanonicalHelper;
 import org.opencds.cqf.common.helpers.DateHelper;
-import org.opencds.cqf.cql.runtime.DateTime;
-import org.opencds.cqf.cql.runtime.Interval;
-import org.opencds.cqf.cql.terminology.TerminologyProvider;
+import org.opencds.cqf.cql.engine.runtime.DateTime;
+import org.opencds.cqf.cql.engine.runtime.Interval;
+import org.opencds.cqf.cql.engine.terminology.TerminologyProvider;
 import org.opencds.cqf.r4.helpers.FhirMeasureBundler;
 import org.opencds.cqf.r4.helpers.LibraryHelper;
 
@@ -132,7 +131,7 @@ public class CqlExecutionProcessor {
         }
 
         //TODO: resolveContextParameters i.e. patient
-        com.alphora.cql.service.Parameters evaluationParameters = new com.alphora.cql.service.Parameters();
+        org.opencds.cqf.cql.service.Parameters evaluationParameters = new org.opencds.cqf.cql.service.Parameters();
         Map<String, Endpoint> endpointIndex = new HashMap<String, Endpoint>();
         if(terminologyEndpoint != null) {
             endpointIndex.put(terminologyEndpoint.getAddress(), terminologyEndpoint);
@@ -155,12 +154,10 @@ public class CqlExecutionProcessor {
             Service service = new Service(libraryFactory, dataProviderFactory, terminologyProviderFactory, null, null, null, null);
             Response response = service.evaluate(evaluationParameters);
             
-            for (Entry<VersionedIdentifier, LibraryResult> libraryEntry : response.evaluationResult.libraryResults.entrySet()) {
-                for (Entry<String, Object> expressionEntry : libraryEntry.getValue().expressionResults.entrySet()) {
+                for (Entry<String, Object> expressionEntry : response.evaluationResult.expressionResults.entrySet()) {
                     Object res = expressionEntry.getValue();
                     result = getResult(res, executionResults);
                 }
-            }
         }
         catch (RuntimeException re) {
             re.printStackTrace();
@@ -215,7 +212,7 @@ public class CqlExecutionProcessor {
 
                 //TODO: resolveContextParameters i.e. patient
                 DefaultLibraryLoaderFactory libraryFactory = new DefaultLibraryLoaderFactory(this.getLibraryResourceProvider());
-                com.alphora.cql.service.Parameters parameters = new com.alphora.cql.service.Parameters();
+                org.opencds.cqf.cql.service.Parameters parameters = new org.opencds.cqf.cql.service.Parameters();
                 Map<Pair<String, String>, Object> parametersMap = new HashMap<Pair<String, String>, Object>();
                 parameters.libraryName = library.getIdentifier().getId();
                 parameters.libraries = libraries;
@@ -233,7 +230,7 @@ public class CqlExecutionProcessor {
                 
                 Response response = service.evaluate(parameters);
 
-                result = response.evaluationResult.forLibrary(library.getIdentifier()).forExpression(cqlName);
+                result = response.evaluationResult.forExpression(cqlName);
                 return result;
             }
             throw new RuntimeException("Could not find Expression in Referenced Libraries");
@@ -257,15 +254,14 @@ public class CqlExecutionProcessor {
     }
 
     private Object evaluateLocalLibrary(IBaseResource resource, String libraryContent, TerminologyProviderFactory terminologyProviderFactory) {
-        com.alphora.cql.service.Parameters parameters = new com.alphora.cql.service.Parameters();
+        org.opencds.cqf.cql.service.Parameters parameters = new org.opencds.cqf.cql.service.Parameters();
         parameters.libraries = Collections.singletonList(libraryContent);
         parameters.expressions = Collections.singletonList(Pair.of("LocalLibrary", "Expression"));
         parameters.parameters = Collections.singletonMap(Pair.of(null, resource.fhirType()), resource);
         Service service = new Service(null, this.dataProviderFactory, terminologyProviderFactory, null, null, null, null);
         Response response = service.evaluate(parameters);
 
-        return response.evaluationResult.forLibrary(new VersionedIdentifier().withId("LocalLibrary"))
-                .forExpression("Expression");
+        return response.evaluationResult.forExpression("Expression");
     }
 
     private Parameters getResult(Object res, String executionResults) {

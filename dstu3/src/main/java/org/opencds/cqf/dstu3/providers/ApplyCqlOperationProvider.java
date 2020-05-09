@@ -13,8 +13,8 @@ import org.hl7.fhir.dstu3.model.*;
 import org.hl7.fhir.exceptions.FHIRException;
 import org.opencds.cqf.common.factories.DefaultTerminologyProviderFactory;
 import org.opencds.cqf.common.helpers.TranslatorHelper;
-import org.opencds.cqf.cql.runtime.DateTime;
-import org.opencds.cqf.cql.terminology.TerminologyProvider;
+import org.opencds.cqf.cql.engine.runtime.DateTime;
+import org.opencds.cqf.cql.engine.terminology.TerminologyProvider;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -25,10 +25,10 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.lang3.tuple.Pair;
-import com.alphora.cql.service.Response;
-import com.alphora.cql.service.Service;
-import com.alphora.cql.service.factory.DataProviderFactory;
-import com.alphora.cql.service.factory.TerminologyProviderFactory;
+import org.opencds.cqf.cql.service.Response;
+import org.opencds.cqf.cql.service.Service;
+import org.opencds.cqf.cql.service.factory.DataProviderFactory;
+import org.opencds.cqf.cql.service.factory.TerminologyProviderFactory;
 
 public class ApplyCqlOperationProvider {
 
@@ -89,20 +89,18 @@ public class ApplyCqlOperationProvider {
                     if (!extension.isEmpty()) {
                         String cql = String.format("library LocalLibrary using FHIR version '3.0.0' define Expression: %s", extension.get(1));
                         library = TranslatorHelper.translateLibrary(cql, new LibraryManager(new ModelManager()), new ModelManager());
-                        com.alphora.cql.service.Parameters parameters = new com.alphora.cql.service.Parameters();
+                        org.opencds.cqf.cql.service.Parameters parameters = new org.opencds.cqf.cql.service.Parameters();
                         parameters.libraries = Collections.singletonList(library.toString());
                         parameters.expressions = Collections.singletonList(Pair.of("LocalLibrary", "Expression"));
                         parameters.parameters = Collections.singletonMap(Pair.of(null, resource.fhirType()), resource);
                         Service service = new Service(null, this.dataProviderFactory, terminologyProviderFactory, null, null, null, null);
                         Response response = service.evaluate(parameters);
 
-                        Object result = response.evaluationResult.forLibrary(new VersionedIdentifier().withId("LocalLibrary"))
-                            .forExpression("Expression");
+                        Object result = response.evaluationResult.forExpression("Expression");
 
                         if (extension.get(0).equals("extension")) {
                             resource.setProperty(child.getName(), resolveType(result, base.fhirType()));
-                        }
-                        else {
+                        } else {
                             String type = base.getChildByName(extension.get(0)).getTypeCode();
                             base.setProperty(extension.get(0), resolveType(result, type));
                         }
@@ -120,13 +118,13 @@ public class ApplyCqlOperationProvider {
                 if (childBase != null) {
                     if (((Element) childBase).hasExtension()) {
                         for (Extension extension : ((Element) childBase).getExtension()) {
-                            if (extension.getUrl().equals("http://hl7.org/fhir/StructureDefinition/cqif-cqlExpression")) {
+                            if (extension.getUrl()
+                                    .equals("http://hl7.org/fhir/StructureDefinition/cqif-cqlExpression")) {
                                 retVal.add(child.getName());
                                 retVal.add(extension.getValue().primitiveValue());
                             }
                         }
-                    }
-                    else if (childBase instanceof Extension) {
+                    } else if (childBase instanceof Extension) {
                         retVal.add(child.getName());
                         retVal.add(((Extension) childBase).getValue().primitiveValue());
                     }
@@ -139,31 +137,27 @@ public class ApplyCqlOperationProvider {
     private Base resolveType(Object source, String type) {
         if (source instanceof Integer) {
             return new IntegerType((Integer) source);
-        }
-        else if (source instanceof BigDecimal) {
+        } else if (source instanceof BigDecimal) {
             return new DecimalType((BigDecimal) source);
-        }
-        else if (source instanceof Boolean) {
+        } else if (source instanceof Boolean) {
             return new BooleanType().setValue((Boolean) source);
-        }
-        else if (source instanceof String) {
+        } else if (source instanceof String) {
             return new StringType((String) source);
-        }
-        else if (source instanceof DateTime) {
+        } else if (source instanceof DateTime) {
             if (type.equals("dateTime")) {
                 return new DateTimeType().setValue(Date.from(((DateTime) source).getDateTime().toInstant()));
             }
             if (type.equals("date")) {
                 return new DateType().setValue(Date.from(((DateTime) source).getDateTime().toInstant()));
             }
-        }
-        else if (source instanceof org.opencds.cqf.cql.runtime.Date)
-        {
+        } else if (source instanceof org.opencds.cqf.cql.engine.runtime.Date) {
             if (type.equals("dateTime")) {
-                return new DateTimeType().setValue(java.sql.Date.valueOf(((org.opencds.cqf.cql.runtime.Date) source).getDate()));
+                return new DateTimeType()
+                        .setValue(java.sql.Date.valueOf(((org.opencds.cqf.cql.engine.runtime.Date) source).getDate()));
             }
             if (type.equals("date")) {
-                return new DateType().setValue(java.sql.Date.valueOf(((org.opencds.cqf.cql.runtime.Date) source).getDate()));
+                return new DateType()
+                        .setValue(java.sql.Date.valueOf(((org.opencds.cqf.cql.engine.runtime.Date) source).getDate()));
             }
         }
 

@@ -16,7 +16,8 @@ public class TaskProvider {
     private DaoRegistry registry;
 
     public TaskProvider(FhirContext fhirContext, DaoRegistry registry) {
-        
+        this.fhirContext = fhirContext;
+        this.registry = registry;
     }
 
     //check Fhir Standard for operations

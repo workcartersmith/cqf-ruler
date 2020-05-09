@@ -12,9 +12,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import com.alphora.cql.service.factory.LibraryLoaderFactory;
-import com.alphora.cql.service.loader.TranslatingLibraryLoader;
-import com.alphora.cql.service.manager.CacheAwareModelManager;
+import org.opencds.cqf.cql.service.factory.LibraryLoaderFactory;
+import org.opencds.cqf.cql.service.loader.TranslatingLibraryLoader;
+import org.opencds.cqf.cql.service.manager.CacheAwareModelManager;
 
 import org.cqframework.cql.cql2elm.CqlTranslator;
 import org.cqframework.cql.cql2elm.LibraryManager;
@@ -23,7 +23,7 @@ import org.cqframework.cql.cql2elm.model.Model;
 import org.hl7.elm.r1.VersionedIdentifier;
 import org.opencds.cqf.common.providers.LibraryResolutionProvider;
 import org.opencds.cqf.common.providers.LibrarySourceProvider;
-import org.opencds.cqf.cql.execution.LibraryLoader;
+import org.opencds.cqf.cql.engine.execution.LibraryLoader;
 import org.opencds.cqf.common.evaluation.RulerLibraryLoader;
 
 // This is intended to be general-purpose factory but there are specific cases where we probably want to change the behavior.

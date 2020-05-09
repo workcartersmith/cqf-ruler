@@ -6,7 +6,7 @@ import java.util.Map;
 
 import javax.servlet.ServletException;
 
-import com.alphora.cql.service.factory.DataProviderFactory;
+import org.opencds.cqf.cql.service.factory.DataProviderFactory;
 
 import org.hl7.fhir.dstu3.model.ActivityDefinition;
 import org.hl7.fhir.dstu3.model.Bundle;
@@ -21,7 +21,7 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.opencds.cqf.common.config.HapiProperties;
 import org.opencds.cqf.common.factories.DefaultDataProviderFactory;
 import org.opencds.cqf.common.retrieve.JpaFhirRetrieveProvider;
-import org.opencds.cqf.cql.searchparam.SearchParameterResolver;
+import org.opencds.cqf.cql.engine.fhir.searchparam.SearchParameterResolver;
 import org.opencds.cqf.dstu3.providers.ActivityDefinitionApplyProvider;
 import org.opencds.cqf.dstu3.providers.ApplyCqlOperationProvider;
 import org.opencds.cqf.dstu3.providers.CacheValueSetsProvider;
@@ -78,12 +78,11 @@ public class BaseServlet extends RestfulServer {
         // Fhir Context
         this.fhirContext = appCtx.getBean(FhirContext.class);
         this.fhirContext.getRestfulClientFactory().setServerValidationMode(ServerValidationModeEnum.NEVER);
-		this.fhirContext.registerCustomType(VersionedTerminologyRef.class);
-		this.fhirContext.registerCustomType(CodeTerminologyRef.class);
-		this.fhirContext.registerCustomType(PopulationCriteriaMap.class);
-		this.fhirContext.registerCustomType(CqfMeasure.class);
+        this.fhirContext.registerCustomType(VersionedTerminologyRef.class);
+        this.fhirContext.registerCustomType(CodeTerminologyRef.class);
+        this.fhirContext.registerCustomType(PopulationCriteriaMap.class);
+        this.fhirContext.registerCustomType(CqfMeasure.class);
         setFhirContext(this.fhirContext);
-
 
         // System and Resource Daos
         IFhirSystemDao<Bundle, Meta> systemDao = appCtx.getBean("mySystemDaoDstu3", IFhirSystemDao.class);
@@ -93,10 +92,12 @@ public class BaseServlet extends RestfulServer {
         Object systemProvider = appCtx.getBean("mySystemProviderDstu3", JpaSystemProviderDstu3.class);
         registerProvider(systemProvider);
 
-        ResourceProviderFactory resourceProviders = appCtx.getBean("myResourceProvidersDstu3", ResourceProviderFactory.class);
+        ResourceProviderFactory resourceProviders = appCtx.getBean("myResourceProvidersDstu3",
+                ResourceProviderFactory.class);
         registerProviders(resourceProviders.createProviders());
 
-        JpaConformanceProviderDstu3 confProvider = new JpaConformanceProviderDstu3(this, systemDao, appCtx.getBean(DaoConfig.class));
+        JpaConformanceProviderDstu3 confProvider = new JpaConformanceProviderDstu3(this, systemDao,
+                appCtx.getBean(DaoConfig.class));
         confProvider.setImplementationDescription("CQF Ruler FHIR DSTU3 Server");
         setServerConformanceProvider(confProvider);
 
@@ -128,37 +129,36 @@ public class BaseServlet extends RestfulServer {
         setDefaultResponseEncoding(HapiProperties.getDefaultEncoding());
 
         /*
-         * This configures the server to page search results to and from
-         * the database, instead of only paging them to memory. This may mean
-         * a performance hit when performing searches that return lots of results,
-         * but makes the server much more scalable.
+         * This configures the server to page search results to and from the database,
+         * instead of only paging them to memory. This may mean a performance hit when
+         * performing searches that return lots of results, but makes the server much
+         * more scalable.
          */
         setPagingProvider(appCtx.getBean(DatabaseBackedPagingProvider.class));
 
         /*
-         * This interceptor formats the output using nice colourful
-         * HTML output when the request is detected to come from a
-         * browser.
+         * This interceptor formats the output using nice colourful HTML output when the
+         * request is detected to come from a browser.
          */
-        ResponseHighlighterInterceptor responseHighlighterInterceptor = appCtx.getBean(ResponseHighlighterInterceptor.class);
+        ResponseHighlighterInterceptor responseHighlighterInterceptor = appCtx
+                .getBean(ResponseHighlighterInterceptor.class);
         this.registerInterceptor(responseHighlighterInterceptor);
 
         /*
          * If you are hosting this server at a specific DNS name, the server will try to
          * figure out the FHIR base URL based on what the web container tells it, but
-         * this doesn't always work. If you are setting links in your search bundles that
-         * just refer to "localhost", you might want to use a server address strategy:
+         * this doesn't always work. If you are setting links in your search bundles
+         * that just refer to "localhost", you might want to use a server address
+         * strategy:
          */
         String serverAddress = HapiProperties.getServerAddress();
-        if (serverAddress != null && serverAddress.length() > 0)
-        {
+        if (serverAddress != null && serverAddress.length() > 0) {
             setServerAddressStrategy(new HardcodedServerAddressStrategy(serverAddress));
         }
 
         registerProvider(appCtx.getBean(TerminologyUploaderProvider.class));
 
-        if (HapiProperties.getCorsEnabled())
-        {
+        if (HapiProperties.getCorsEnabled()) {
             CorsConfiguration config = new CorsConfiguration();
             config.addAllowedHeader("x-fhir-starter");
             config.addAllowedHeader("Origin");
@@ -178,13 +178,14 @@ public class BaseServlet extends RestfulServer {
             CorsInterceptor interceptor = new CorsInterceptor(config);
             registerInterceptor(interceptor);
         }
-	}
-	
-	protected NarrativeProvider getNarrativeProvider() {
-		return new NarrativeProvider();
-	}
+    }
 
-    // Since resource provider resolution not lazy, the providers here must be resolved in the correct
+    protected NarrativeProvider getNarrativeProvider() {
+        return new NarrativeProvider();
+    }
+
+    // Since resource provider resolution not lazy, the providers here must be
+    // resolved in the correct
     // order of dependencies.
     private void resolveProviders(DataProviderFactory dataProviderFactory, JpaTerminologyProvider localSystemTerminologyProvider, DaoRegistry registry)
             throws ServletException
@@ -193,17 +194,18 @@ public class BaseServlet extends RestfulServer {
         HQMFProvider hqmfProvider = new HQMFProvider();
 
         // Code System Update
-        CodeSystemUpdateProvider csUpdate = new CodeSystemUpdateProvider(
-            this.getDao(ValueSet.class),
-            this.getDao(CodeSystem.class));
+        CodeSystemUpdateProvider csUpdate = new CodeSystemUpdateProvider(this.getDao(ValueSet.class),
+                this.getDao(CodeSystem.class));
         this.registerProvider(csUpdate);
 
         // Cache Value Sets
-        CacheValueSetsProvider cvs = new CacheValueSetsProvider(this.registry.getSystemDao(), this.getDao(Endpoint.class));
+        CacheValueSetsProvider cvs = new CacheValueSetsProvider(this.registry.getSystemDao(),
+                this.getDao(Endpoint.class));
         this.registerProvider(cvs);
 
-        //Library processing
-        LibraryOperationsProvider libraryProvider = new LibraryOperationsProvider((LibraryResourceProvider)this.getResourceProvider(Library.class), narrativeProvider);
+        // Library processing
+        LibraryOperationsProvider libraryProvider = new LibraryOperationsProvider(
+                (LibraryResourceProvider) this.getResourceProvider(Library.class), narrativeProvider);
         this.registerProvider(libraryProvider);
 
         // CQL Execution
@@ -220,13 +222,15 @@ public class BaseServlet extends RestfulServer {
         this.registerProvider(measureProvider);
 
         // // ActivityDefinition processing
-        ActivityDefinitionApplyProvider actDefProvider = new ActivityDefinitionApplyProvider(this.fhirContext, cql, this.getDao(ActivityDefinition.class));
+        ActivityDefinitionApplyProvider actDefProvider = new ActivityDefinitionApplyProvider(this.fhirContext, cql,
+                this.getDao(ActivityDefinition.class));
         this.registerProvider(actDefProvider);
 
         JpaFhirRetrieveProvider localSystemRetrieveProvider = new JpaFhirRetrieveProvider(registry, new SearchParameterResolver(this.fhirContext));
 
         // PlanDefinition processing
-        PlanDefinitionApplyProvider planDefProvider = new PlanDefinitionApplyProvider(this.fhirContext, actDefProvider, this.getDao(PlanDefinition.class), this.getDao(ActivityDefinition.class), cql);
+        PlanDefinitionApplyProvider planDefProvider = new PlanDefinitionApplyProvider(this.fhirContext, actDefProvider,
+                this.getDao(PlanDefinition.class), this.getDao(ActivityDefinition.class), cql);
         this.registerProvider(planDefProvider);
 
         CdsHooksServlet.setPlanDefinitionProvider(planDefProvider);
@@ -239,9 +243,8 @@ public class BaseServlet extends RestfulServer {
         return this.registry.getResourceDao(clazz);
     }
 
-
-    protected <T extends IBaseResource> BaseJpaResourceProvider<T>  getResourceProvider(Class<T> clazz) {
-        return (BaseJpaResourceProvider<T> ) this.getResourceProviders().stream()
-        .filter(x -> x.getResourceType().getSimpleName().equals(clazz.getSimpleName())).findFirst().get();
+    protected <T extends IBaseResource> BaseJpaResourceProvider<T> getResourceProvider(Class<T> clazz) {
+        return (BaseJpaResourceProvider<T>) this.getResourceProviders().stream()
+                .filter(x -> x.getResourceType().getSimpleName().equals(clazz.getSimpleName())).findFirst().get();
     }
 }

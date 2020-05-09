@@ -1,29 +1,49 @@
 package org.opencds.cqf.r4.providers;
 
 import ca.uhn.fhir.context.FhirContext;
+import org.cqframework.cql.elm.execution.VersionedIdentifier;
+import org.hl7.fhir.r4.model.*;
+import org.opencds.cqf.common.factories.DefaultTerminologyProviderFactory;
+import org.opencds.cqf.cql.engine.terminology.TerminologyProvider;
+
+import java.math.BigDecimal;
+import java.util.AbstractMap;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+
+import org.cqframework.cql.cql2elm.LibraryManager;
+import org.cqframework.cql.cql2elm.ModelManager;
+import org.cqframework.cql.elm.execution.Library;
+import org.hl7.fhir.exceptions.FHIRException;
+import org.hl7.fhir.r4.model.Base;
+import org.hl7.fhir.r4.model.BooleanType;
+import org.hl7.fhir.r4.model.Bundle;
+import org.hl7.fhir.r4.model.DateTimeType;
+import org.hl7.fhir.r4.model.DateType;
+import org.hl7.fhir.r4.model.DecimalType;
+import org.hl7.fhir.r4.model.Element;
+import org.hl7.fhir.r4.model.Expression;
+import org.hl7.fhir.r4.model.Extension;
+import org.hl7.fhir.r4.model.IdType;
+import org.hl7.fhir.r4.model.IntegerType;
+import org.hl7.fhir.r4.model.Property;
+import org.hl7.fhir.r4.model.Resource;
+import org.hl7.fhir.r4.model.StringType;
+import org.opencds.cqf.common.helpers.TranslatorHelper;
+import org.opencds.cqf.cql.engine.execution.Context;
+import org.opencds.cqf.cql.engine.runtime.DateTime;
+
 import ca.uhn.fhir.jpa.dao.IFhirResourceDao;
 import ca.uhn.fhir.rest.annotation.IdParam;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
-import org.cqframework.cql.cql2elm.LibraryManager;
-import org.cqframework.cql.cql2elm.ModelManager;
-import org.cqframework.cql.elm.execution.Library;
-import org.cqframework.cql.elm.execution.VersionedIdentifier;
-import org.hl7.fhir.r4.model.*;
-import org.hl7.fhir.exceptions.FHIRException;
-import org.opencds.cqf.common.factories.DefaultTerminologyProviderFactory;
-import org.opencds.cqf.common.helpers.TranslatorHelper;
-import org.opencds.cqf.cql.runtime.DateTime;
-import org.opencds.cqf.cql.terminology.TerminologyProvider;
-
-import java.math.BigDecimal;
-import java.util.*;
 
 import org.apache.commons.lang3.tuple.Pair;
-import com.alphora.cql.service.Response;
-import com.alphora.cql.service.Service;
-import com.alphora.cql.service.factory.DataProviderFactory;
-import com.alphora.cql.service.factory.TerminologyProviderFactory;
+import org.opencds.cqf.cql.service.Response;
+import org.opencds.cqf.cql.service.Service;
+import org.opencds.cqf.cql.service.factory.DataProviderFactory;
+import org.opencds.cqf.cql.service.factory.TerminologyProviderFactory;
 
 public class ApplyCqlOperationProvider {
 
@@ -87,8 +107,7 @@ public class ApplyCqlOperationProvider {
                         Object result = this.cqlExecutionProvider.evaluateInContext(resource, extensions.getValue(), "",  false);
                         if (extensions.getKey().equals("extension")) {
                             resource.setProperty(child.getName(), resolveType(result, base.fhirType()));
-                        }
-                        else {
+                        } else {
                             String type = base.getChildByName(extensions.getKey()).getTypeCode();
                             base.setProperty(extensions.getKey(), resolveType(result, type));
                         }
@@ -106,12 +125,13 @@ public class ApplyCqlOperationProvider {
                     if (((Element) childBase).hasExtension()) {
                         for (Extension extension : ((Element) childBase).getExtension()) {
                             if (extension.getUrl().equals("http://hl7.org/fhir/StructureDefinition/cqf-expression")) {
-                                return new AbstractMap.SimpleEntry<>(child.getName(), ((Expression) extension.getValue()).getExpression());
+                                return new AbstractMap.SimpleEntry<>(child.getName(),
+                                        ((Expression) extension.getValue()).getExpression());
                             }
                         }
-                    }
-                    else if (childBase instanceof Extension) {
-                        return new AbstractMap.SimpleEntry<>(child.getName(), ((Expression) ((Extension) childBase).getValue()).getExpression());
+                    } else if (childBase instanceof Extension) {
+                        return new AbstractMap.SimpleEntry<>(child.getName(),
+                                ((Expression) ((Extension) childBase).getValue()).getExpression());
                     }
                 }
             }
@@ -122,31 +142,27 @@ public class ApplyCqlOperationProvider {
     private Base resolveType(Object source, String type) {
         if (source instanceof Integer) {
             return new IntegerType((Integer) source);
-        }
-        else if (source instanceof BigDecimal) {
+        } else if (source instanceof BigDecimal) {
             return new DecimalType((BigDecimal) source);
-        }
-        else if (source instanceof Boolean) {
+        } else if (source instanceof Boolean) {
             return new BooleanType().setValue((Boolean) source);
-        }
-        else if (source instanceof String) {
+        } else if (source instanceof String) {
             return new StringType((String) source);
-        }
-        else if (source instanceof DateTime) {
+        } else if (source instanceof DateTime) {
             if (type.equals("dateTime")) {
                 return new DateTimeType().setValue(Date.from(((DateTime) source).getDateTime().toInstant()));
             }
             if (type.equals("date")) {
                 return new DateType().setValue(Date.from(((DateTime) source).getDateTime().toInstant()));
             }
-        }
-        else if (source instanceof org.opencds.cqf.cql.runtime.Date)
-        {
+        } else if (source instanceof org.opencds.cqf.cql.engine.runtime.Date) {
             if (type.equals("dateTime")) {
-                return new DateTimeType().setValue(java.sql.Date.valueOf(((org.opencds.cqf.cql.runtime.Date) source).getDate()));
+                return new DateTimeType()
+                        .setValue(java.sql.Date.valueOf(((org.opencds.cqf.cql.engine.runtime.Date) source).getDate()));
             }
             if (type.equals("date")) {
-                return new DateType().setValue(java.sql.Date.valueOf(((org.opencds.cqf.cql.runtime.Date) source).getDate()));
+                return new DateType()
+                        .setValue(java.sql.Date.valueOf(((org.opencds.cqf.cql.engine.runtime.Date) source).getDate()));
             }
         }
 

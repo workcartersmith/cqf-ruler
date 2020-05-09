@@ -31,7 +31,7 @@ import org.hl7.fhir.instance.model.api.IBase;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.utilities.xhtml.XhtmlNode;
 import org.opencds.cqf.common.providers.LibraryResolutionProvider;
-import org.opencds.cqf.cql.execution.LibraryLoader;
+import org.opencds.cqf.cql.engine.execution.LibraryLoader;
 import org.opencds.cqf.library.r4.NarrativeProvider;
 import org.opencds.cqf.measure.r4.CqfMeasure;
 import org.opencds.cqf.r4.evaluation.MeasureEvaluation;
@@ -39,16 +39,16 @@ import org.opencds.cqf.r4.helpers.LibraryHelper;
 import org.opencds.cqf.r4.providers.DataRequirementsProvider;
 import org.opencds.cqf.r4.providers.HQMFProvider;
 
-import org.opencds.cqf.cql.runtime.DateTime;
-import org.opencds.cqf.cql.runtime.Interval;
-import org.opencds.cqf.cql.terminology.TerminologyProvider;
+import org.opencds.cqf.cql.engine.runtime.DateTime;
+import org.opencds.cqf.cql.engine.runtime.Interval;
+import org.opencds.cqf.cql.engine.terminology.TerminologyProvider;
 import org.opencds.cqf.common.factories.DefaultTerminologyProviderFactory;
 import org.opencds.cqf.common.helpers.DateHelper;
 import org.opencds.cqf.r4.factories.DefaultLibraryLoaderFactory;
 
-import com.alphora.cql.service.Service;
-import com.alphora.cql.service.factory.DataProviderFactory;
-import com.alphora.cql.service.factory.TerminologyProviderFactory;
+import org.opencds.cqf.cql.service.Service;
+import org.opencds.cqf.cql.service.factory.DataProviderFactory;
+import org.opencds.cqf.cql.service.factory.TerminologyProviderFactory;
 
 import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
 import ca.uhn.fhir.context.FhirContext;
@@ -195,7 +195,7 @@ public class MeasureOperationsProcessor {
         }
 
         //TODO: resolveContextParameters i.e. patient
-        com.alphora.cql.service.Parameters evaluationParameters = new com.alphora.cql.service.Parameters();
+        org.opencds.cqf.cql.service.Parameters evaluationParameters = new org.opencds.cqf.cql.service.Parameters();
         evaluationParameters.libraries = Collections.singletonList(library.toString());
         evaluationParameters.parameters = parametersMap;   
         evaluationParameters.expressions =  new ArrayList<Pair<String, String>>();
@@ -313,7 +313,7 @@ public class MeasureOperationsProcessor {
         }
 
         //TODO: resolveContextParameters i.e. patient
-        com.alphora.cql.service.Parameters evaluationParameters = new com.alphora.cql.service.Parameters();
+        org.opencds.cqf.cql.service.Parameters evaluationParameters = new org.opencds.cqf.cql.service.Parameters();
         evaluationParameters.libraries = Collections.singletonList(library.toString());
         evaluationParameters.parameters = parametersMap;    
         evaluationParameters.expressions =  new ArrayList<Pair<String, String>>();  

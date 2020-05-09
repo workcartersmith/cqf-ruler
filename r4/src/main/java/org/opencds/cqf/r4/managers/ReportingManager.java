@@ -4,7 +4,7 @@ import java.io.IOException;
 
 import javax.xml.bind.JAXBException;
 
-import com.alphora.cql.service.factory.DataProviderFactory;
+import org.opencds.cqf.cql.service.factory.DataProviderFactory;
 
 import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.instance.model.api.IAnyResource;
@@ -14,7 +14,7 @@ import org.hl7.fhir.r4.model.Endpoint;
 import org.hl7.fhir.r4.model.IdType;
 import org.hl7.fhir.r4.model.Task;
 import org.opencds.cqf.common.providers.LibraryResolutionProvider;
-import org.opencds.cqf.cql.terminology.TerminologyProvider;
+import org.opencds.cqf.cql.engine.terminology.TerminologyProvider;
 import org.opencds.cqf.r4.processors.ActivityDefinitionApplyProcessor;
 import org.opencds.cqf.r4.processors.CarePlanProcessor;
 import org.opencds.cqf.r4.processors.CqlExecutionProcessor;

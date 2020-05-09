@@ -1,37 +1,48 @@
 package org.opencds.cqf.r4.evaluation;
 
-import ca.uhn.fhir.jpa.dao.DaoRegistry;
-import ca.uhn.fhir.jpa.searchparam.SearchParameterMap;
-import ca.uhn.fhir.rest.api.server.IBundleProvider;
-import ca.uhn.fhir.rest.param.ReferenceParam;
-import org.hl7.fhir.r4.model.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.UUID;
+
+import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.hl7.fhir.r4.model.IdType;
+import org.hl7.fhir.r4.model.ListResource;
+import org.hl7.fhir.r4.model.Measure;
+import org.hl7.fhir.r4.model.MeasureReport;
 import org.hl7.fhir.r4.model.Patient;
 import org.hl7.fhir.r4.model.Quantity;
-import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.hl7.fhir.r4.model.Reference;
+import org.hl7.fhir.r4.model.Resource;
 import org.opencds.cqf.common.evaluation.MeasurePopulationType;
 import org.opencds.cqf.common.evaluation.MeasureScoring;
-import org.opencds.cqf.cql.runtime.Interval;
+import org.opencds.cqf.cql.engine.runtime.Interval;
 import org.opencds.cqf.r4.builders.MeasureReportBuilder;
 import org.opencds.cqf.r4.helpers.FhirMeasureBundler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.commons.lang3.tuple.Pair;
 
-import java.util.*;
+import ca.uhn.fhir.jpa.dao.DaoRegistry;
+import ca.uhn.fhir.jpa.searchparam.SearchParameterMap;
+import ca.uhn.fhir.rest.api.server.IBundleProvider;
+import ca.uhn.fhir.rest.param.ReferenceParam;
 
-import com.alphora.cql.service.Response;
-import com.alphora.cql.service.Service;
+import org.opencds.cqf.cql.service.Response;
+import org.opencds.cqf.cql.service.Service;
 
 public class MeasureEvaluation {
 
     private static final Logger logger = LoggerFactory.getLogger(MeasureEvaluation.class);
 
     private Service service;
-    private com.alphora.cql.service.Parameters parameters;
+    private org.opencds.cqf.cql.service.Parameters parameters;
     private org.cqframework.cql.elm.execution.Library primaryLibrary;
     private DaoRegistry registry;
 
-    public MeasureEvaluation(com.alphora.cql.service.Parameters parameters, Service service, org.cqframework.cql.elm.execution.Library primaryLibrary, DaoRegistry registry) {
+    public MeasureEvaluation(org.opencds.cqf.cql.service.Parameters parameters, Service service, org.cqframework.cql.elm.execution.Library primaryLibrary, DaoRegistry registry) {
         this.service = service;
         this.parameters = parameters;
         this.primaryLibrary = primaryLibrary;
@@ -47,8 +58,9 @@ public class MeasureEvaluation {
 
         Patient patient = registry.getResourceDao(Patient.class).read(new IdType(patientId));
         parameters.contextParameters = Collections.singletonMap("Patient", patientId);
+        List<Patient> patients = (patient == null) ? Collections.emptyList() : Collections.singletonList(patient);
 
-        return evaluate(measure, patient == null ? Collections.emptyList() : Collections.singletonList(patient), MeasureReport.MeasureReportType.INDIVIDUAL);
+        return evaluate(measure, patients, MeasureReport.MeasureReportType.INDIVIDUAL);
     }
 
     public MeasureReport evaluateSubjectListMeasure(Measure measure, String practitionerRef)
@@ -61,14 +73,8 @@ public class MeasureEvaluation {
 
     private List<Patient> getPractitionerPatients(String practitionerRef) {
         SearchParameterMap map = new SearchParameterMap();
-        map.add(
-                "general-practitioner",
-                new ReferenceParam(
-                        practitionerRef.startsWith("Practitioner/")
-                                ? practitionerRef
-                                : "Practitioner/" + practitionerRef
-                )
-        );
+        map.add("general-practitioner", new ReferenceParam(
+                practitionerRef.startsWith("Practitioner/") ? practitionerRef : "Practitioner/" + practitionerRef));
 
         List<Patient> patients = new ArrayList<>();
         IBundleProvider patientProvider = registry.getResourceDao("Patient").search(map);
@@ -99,28 +105,24 @@ public class MeasureEvaluation {
         }
         Response response = service.evaluate(parameters);
         if (evaluatedResourceSet != null) {
-            response.evaluationResult.libraryResults.values()
-        .forEach(
-            libraryResult -> libraryResult.expressionResults.values()
-                .stream()
+            response.evaluationResult.expressionResults.values().stream()
                 .filter(expressionResult -> expressionResult instanceof Resource)
-                .forEach(expressionResult -> evaluatedResourceSet.add((Resource)expressionResult)));
+                .forEach(expressionResult -> evaluatedResourceSet.add((Resource)expressionResult));
         }
-        Object result = response.evaluationResult.forLibrary(primaryLibrary.getIdentifier()).forExpression(pop.getCriteria().getExpression());
+        Object result = response.evaluationResult.forExpression(pop.getCriteria().getExpression());
         if (result == null) {
             return Collections.emptyList();
         }
 
         if (result instanceof Boolean) {
-            if (((Boolean)result)) {
+            if (((Boolean) result)) {
                 return Collections.singletonList(patient);
-            }
-            else {
+            } else {
                 return Collections.emptyList();
             }
         }
 
-        return (Iterable)result;
+        return (Iterable) result;
     }
 
     private boolean evaluatePopulationCriteria(HashSet<Object> evaluatedResourceSet, Patient patient,
@@ -156,7 +158,10 @@ public class MeasureEvaluation {
         return inPopulation;
     }
 
-    private void addPopulationCriteriaReport(MeasureReport report, MeasureReport.MeasureReportGroupComponent reportGroup, Measure.MeasureGroupPopulationComponent populationCriteria, int populationCount, Iterable<Patient> patientPopulation) {
+    private void addPopulationCriteriaReport(MeasureReport report,
+            MeasureReport.MeasureReportGroupComponent reportGroup,
+            Measure.MeasureGroupPopulationComponent populationCriteria, int populationCount,
+            Iterable<Patient> patientPopulation) {
         if (populationCriteria != null) {
             MeasureReport.MeasureReportGroupPopulationComponent populationReport = new MeasureReport.MeasureReportGroupPopulationComponent();
             populationReport.setCode(populationCriteria.getCode());
@@ -166,36 +171,37 @@ public class MeasureEvaluation {
                 populationReport.setSubjectResults(new Reference().setReference("#" + SUBJECTLIST.getId()));
                 for (Patient patient : patientPopulation) {
                     ListResource.ListEntryComponent entry = new ListResource.ListEntryComponent()
-                            .setItem(new Reference().setReference(
-                                    patient.getIdElement().getIdPart().startsWith("Patient/") ?
-                                            patient.getIdElement().getIdPart() :
-                                            String.format("Patient/%s", patient.getIdElement().getIdPart()))
+                            .setItem(new Reference()
+                                    .setReference(patient.getIdElement().getIdPart().startsWith("Patient/")
+                                            ? patient.getIdElement().getIdPart()
+                                            : String.format("Patient/%s", patient.getIdElement().getIdPart()))
                                     .setDisplay(patient.getNameFirstRep().getNameAsSingleString()));
                     SUBJECTLIST.addEntry(entry);
                 }
                 report.addContained(SUBJECTLIST);
             }
-			populationReport.setCount(populationCount);
+            populationReport.setCount(populationCount);
             reportGroup.addPopulation(populationReport);
         }
     }
 
-    private MeasureReport evaluate(Measure measure, List<Patient> patients, MeasureReport.MeasureReportType type)
-    {
+    private MeasureReport evaluate(Measure measure, List<Patient> patients,
+            MeasureReport.MeasureReportType type) {
         MeasureReportBuilder reportBuilder = new MeasureReportBuilder();
         reportBuilder.buildStatus("complete");
         reportBuilder.buildType(type);
-        reportBuilder.buildMeasureReference(measure.getIdElement().getResourceType() + "/" + measure.getIdElement().getIdPart());
+        reportBuilder.buildMeasureReference(
+                measure.getIdElement().getResourceType() + "/" + measure.getIdElement().getIdPart());
         if (type == MeasureReport.MeasureReportType.INDIVIDUAL && !patients.isEmpty()) {
-			IdType patientId = patients.get(0).getIdElement();
+            IdType patientId = patients.get(0).getIdElement();
             reportBuilder.buildPatientReference(patientId.getResourceType() + "/" + patientId.getIdPart());
         }
         reportBuilder.buildPeriod((Interval)parameters.parameters.get(Pair.of(null, "Measurement Period")));
 
         MeasureReport report = reportBuilder.build();
 
-        HashMap<String,Resource> resources = new HashMap<>();
-        HashMap<String,HashSet<String>> codeToResourceMap = new HashMap<>();
+        HashMap<String, Resource> resources = new HashMap<>();
+        HashMap<String, HashSet<String>> codeToResourceMap = new HashMap<>();
 
         MeasureScoring measureScoring = MeasureScoring.fromCode(measure.getScoring().getCodingFirstRep().getCode());
         if (measureScoring == null) {
@@ -203,12 +209,13 @@ public class MeasureEvaluation {
         }
 
         for (Measure.MeasureGroupComponent group : measure.getGroup()) {
-			MeasureReport.MeasureReportGroupComponent reportGroup = new MeasureReport.MeasureReportGroupComponent();
-			reportGroup.setId(group.getId());
+            MeasureReport.MeasureReportGroupComponent reportGroup = new MeasureReport.MeasureReportGroupComponent();
+            reportGroup.setId(group.getId());
             report.getGroup().add(reportGroup);
 
             // Declare variables to avoid a hash lookup on every patient
-            // TODO: Isn't quite right, there may be multiple initial populations for a ratio measure...
+            // TODO: Isn't quite right, there may be multiple initial populations for a
+            // ratio measure...
             Measure.MeasureGroupPopulationComponent initialPopulationCriteria = null;
             Measure.MeasureGroupPopulationComponent numeratorCriteria = null;
             Measure.MeasureGroupPopulationComponent numeratorExclusionCriteria = null;
@@ -240,7 +247,8 @@ public class MeasureEvaluation {
             HashMap<String, Patient> measurePopulationExclusionPatients = null;
 
             for (Measure.MeasureGroupPopulationComponent pop : group.getPopulation()) {
-                MeasurePopulationType populationType = MeasurePopulationType.fromCode(pop.getCode().getCodingFirstRep().getCode());
+                MeasurePopulationType populationType = MeasurePopulationType
+                        .fromCode(pop.getCode().getCodingFirstRep().getCode());
                 if (populationType != null) {
                     switch (populationType) {
                         case INITIALPOPULATION:
@@ -343,7 +351,8 @@ public class MeasureEvaluation {
                                     }
                                     if (inException) {
                                         if (denominatorExceptionPatients != null) {
-                                            denominatorExceptionPatients.put(patient.getIdElement().getIdPart(), patient);
+                                            denominatorExceptionPatients.put(patient.getIdElement().getIdPart(),
+                                                    patient);
                                         }
                                         if (denominatorPatients != null) {
                                             denominatorPatients.remove(patient.getIdElement().getIdPart());
@@ -356,7 +365,7 @@ public class MeasureEvaluation {
 
                     // Calculate actual measure score, Count(numerator) / Count(denominator)
                     if (denominator != null && numerator != null && denominator.size() > 0) {
-                        reportGroup.setMeasureScore(new Quantity(numerator.size() / (double)denominator.size()));
+                        reportGroup.setMeasureScore(new Quantity(numerator.size() / (double) denominator.size()));
                     }
 
                     break;
@@ -376,7 +385,8 @@ public class MeasureEvaluation {
                             // Are they in the measure population?
                             boolean inMeasurePopulation = evaluatePopulationCriteria(evaluatedResourceSet, patient,
                                     measurePopulationCriteria, measurePopulation, measurePopulationPatients,
-                                    measurePopulationExclusionCriteria, measurePopulationExclusion, measurePopulationExclusionPatients);
+                                    measurePopulationExclusionCriteria, measurePopulationExclusion,
+                                    measurePopulationExclusionPatients);
 
                             if (inMeasurePopulation) {
                                 // TODO: Evaluate measure observations
@@ -405,14 +415,30 @@ public class MeasureEvaluation {
             }
 
             // Add population reports for each group
-            addPopulationCriteriaReport(report, reportGroup, initialPopulationCriteria, initialPopulation != null ? initialPopulation.size() : 0, initialPopulationPatients != null ? initialPopulationPatients.values() : null);
-            addPopulationCriteriaReport(report, reportGroup, numeratorCriteria, numerator != null ? numerator.size() : 0, numeratorPatients != null ? numeratorPatients.values() : null);
-            addPopulationCriteriaReport(report, reportGroup, numeratorExclusionCriteria, numeratorExclusion != null ? numeratorExclusion.size() : 0, numeratorExclusionPatients != null ? numeratorExclusionPatients.values() : null);
-            addPopulationCriteriaReport(report, reportGroup, denominatorCriteria, denominator != null ? denominator.size() : 0, denominatorPatients != null ? denominatorPatients.values() : null);
-            addPopulationCriteriaReport(report, reportGroup, denominatorExclusionCriteria, denominatorExclusion != null ? denominatorExclusion.size() : 0, denominatorExclusionPatients != null ? denominatorExclusionPatients.values() : null);
-            addPopulationCriteriaReport(report, reportGroup, denominatorExceptionCriteria, denominatorException != null ? denominatorException.size() : 0, denominatorExceptionPatients != null ? denominatorExceptionPatients.values() : null);
-            addPopulationCriteriaReport(report, reportGroup, measurePopulationCriteria,  measurePopulation != null ? measurePopulation.size() : 0, measurePopulationPatients != null ? measurePopulationPatients.values() : null);
-            addPopulationCriteriaReport(report, reportGroup, measurePopulationExclusionCriteria,  measurePopulationExclusion != null ? measurePopulationExclusion.size() : 0, measurePopulationExclusionPatients != null ? measurePopulationExclusionPatients.values() : null);
+            addPopulationCriteriaReport(report, reportGroup, initialPopulationCriteria,
+                    initialPopulation != null ? initialPopulation.size() : 0,
+                    initialPopulationPatients != null ? initialPopulationPatients.values() : null);
+            addPopulationCriteriaReport(report, reportGroup, numeratorCriteria,
+                    numerator != null ? numerator.size() : 0,
+                    numeratorPatients != null ? numeratorPatients.values() : null);
+            addPopulationCriteriaReport(report, reportGroup, numeratorExclusionCriteria,
+                    numeratorExclusion != null ? numeratorExclusion.size() : 0,
+                    numeratorExclusionPatients != null ? numeratorExclusionPatients.values() : null);
+            addPopulationCriteriaReport(report, reportGroup, denominatorCriteria,
+                    denominator != null ? denominator.size() : 0,
+                    denominatorPatients != null ? denominatorPatients.values() : null);
+            addPopulationCriteriaReport(report, reportGroup, denominatorExclusionCriteria,
+                    denominatorExclusion != null ? denominatorExclusion.size() : 0,
+                    denominatorExclusionPatients != null ? denominatorExclusionPatients.values() : null);
+            addPopulationCriteriaReport(report, reportGroup, denominatorExceptionCriteria,
+                    denominatorException != null ? denominatorException.size() : 0,
+                    denominatorExceptionPatients != null ? denominatorExceptionPatients.values() : null);
+            addPopulationCriteriaReport(report, reportGroup, measurePopulationCriteria,
+                    measurePopulation != null ? measurePopulation.size() : 0,
+                    measurePopulationPatients != null ? measurePopulationPatients.values() : null);
+            addPopulationCriteriaReport(report, reportGroup, measurePopulationExclusionCriteria,
+                    measurePopulationExclusion != null ? measurePopulationExclusion.size() : 0,
+                    measurePopulationExclusionPatients != null ? measurePopulationExclusionPatients.values() : null);
             // TODO: Measure Observations...
         }
 

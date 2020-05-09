@@ -21,15 +21,15 @@ public class ActivityDefinitionApplyProvider {
     }
 
     @Operation(name = "$apply", idempotent = true, type = ActivityDefinition.class)
-    public Resource apply(@IdParam IdType theId, @RequiredParam(name = "patient") String patientId,
-            @OptionalParam(name = "encounter") String encounterId,
-            @OptionalParam(name = "practitioner") String practitionerId,
-            @OptionalParam(name = "organization") String organizationId,
-            @OptionalParam(name = "userType") String userType,
-            @OptionalParam(name = "userLanguage") String userLanguage,
-            @OptionalParam(name = "userTaskContext") String userTaskContext,
-            @OptionalParam(name = "setting") String setting,
-            @OptionalParam(name = "settingContext") String settingContext) throws InternalErrorException, FHIRException,
+    public Resource apply(@IdParam IdType theId, @OperationParam(name = "patient") String patientId,
+            @OperationParam(name = "encounter") String encounterId,
+            @OperationParam(name = "practitioner") String practitionerId,
+            @OperationParam(name = "organization") String organizationId,
+            @OperationParam(name = "userType") String userType,
+            @OperationParam(name = "userLanguage") String userLanguage,
+            @OperationParam(name = "userTaskContext") String userTaskContext,
+            @OperationParam(name = "setting") String setting,
+            @OperationParam(name = "settingContext") String settingContext) throws InternalErrorException, FHIRException,
             ClassNotFoundException, IllegalAccessException, InstantiationException, ActivityDefinitionApplyException {
         return activityDefinitionApplyProcessor.apply(theId, patientId, encounterId, practitionerId, organizationId, userType, userLanguage, userTaskContext, setting, settingContext);
     }

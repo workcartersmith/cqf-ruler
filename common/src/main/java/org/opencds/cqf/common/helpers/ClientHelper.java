@@ -4,7 +4,7 @@ import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.client.api.IClientInterceptor;
 import ca.uhn.fhir.rest.client.api.IGenericClient;
 import ca.uhn.fhir.rest.client.api.ServerValidationModeEnum;
-import org.opencds.cqf.cql.terminology.fhir.HeaderInjectionInterceptor;
+import org.opencds.cqf.cql.engine.fhir.terminology.HeaderInjectionInterceptor;
 
 import java.util.HashMap;
 import java.util.List;
@@ -13,11 +13,11 @@ import java.util.stream.Collectors;
 
 public class ClientHelper {
 
-    /* TODO - depending on future needs:
-            1.  add OAuth
-            2.  change if to switch to accommodate additional FHIR versions
+    /*
+     * TODO - depending on future needs: 1. add OAuth 2. change if to switch to
+     * accommodate additional FHIR versions
      */
-    public static IGenericClient getClient(FhirContext fhirContext, String url){
+    private static IGenericClient getRestClient(FhirContext fhirContext, String url) {
         fhirContext.getRestfulClientFactory().setServerValidationMode(ServerValidationModeEnum.NEVER);
         return fhirContext.newRestfulGenericClient(url);
     }
@@ -25,7 +25,7 @@ public class ClientHelper {
     // Overload in case you need to specify a specific version of the context
     public static IGenericClient getClient(FhirContext fhirContext, org.hl7.fhir.dstu3.model.Endpoint endpoint)
     {
-        IGenericClient client = getClient(fhirContext, endpoint.getAddress());
+        IGenericClient client = getRestClient(fhirContext, endpoint.getAddress());
         if (endpoint.hasHeader()){
             List<String> headerList = endpoint.getHeader().stream().map(headerString -> headerString.asStringValue()).collect(Collectors.toList());
             registerAuth(client, headerList);
@@ -35,7 +35,7 @@ public class ClientHelper {
 
     public static IGenericClient getClient(FhirContext fhirContext, org.hl7.fhir.r4.model.Endpoint endpoint)
     {
-        IGenericClient client = getClient(fhirContext, endpoint.getAddress());
+        IGenericClient client = getRestClient(fhirContext, endpoint.getAddress());
         if (endpoint.hasHeader()){
             List<String> headerList = endpoint.getHeader().stream().map(headerString -> headerString.asStringValue()).collect(Collectors.toList());
             registerAuth(client, headerList);

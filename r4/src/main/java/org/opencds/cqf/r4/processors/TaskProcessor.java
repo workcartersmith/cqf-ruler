@@ -5,6 +5,7 @@ import ca.uhn.fhir.jpa.dao.DaoRegistry;
 import ca.uhn.fhir.jpa.dao.IFhirResourceDao;
 import ca.uhn.fhir.rest.client.api.IGenericClient;
 
+import org.hl7.fhir.r4.model.Task.TaskOutputComponent;
 import org.hl7.fhir.instance.model.api.IAnyResource;
 import org.hl7.fhir.r4.model.*;
 
@@ -21,15 +22,19 @@ public class TaskProcessor implements ITaskProcessor<Task> {
 
     private IGenericClient workFlowClient;
     private IFhirResourceDao<Endpoint> endpointDao;
+    private FhirContext fhirContext;
+    private DaoRegistry registry;
 
     public TaskProcessor(FhirContext fhirContext, DaoRegistry registry) {
+        this.fhirContext = fhirContext;
+        this.registry = registry;
         this.endpointDao = registry.getResourceDao(Endpoint.class);
         workFlowClient = ClientHelper.getClient(fhirContext, endpointDao.read(new IdType("local-endpoint")));
     }
 
     public IAnyResource execute(Task task) {
         workFlowClient.read().resource(Task.class).withId(task.getIdElement()).execute();
-        ERSDTaskManager ersdTaskManager = new ERSDTaskManager();
+        ERSDTaskManager ersdTaskManager = new ERSDTaskManager(fhirContext, registry, workFlowClient);
         GuidanceResponse guidanceResponse = new GuidanceResponse();
         String taskId = task.getIdElement().getIdPart();
         guidanceResponse.setId("guidanceResponse-" + taskId);
@@ -40,14 +45,21 @@ public class TaskProcessor implements ITaskProcessor<Task> {
             System.out.println("unable to execute Task: " + taskId);
             e.printStackTrace();
         }
-        resolveStatusAndUpdate(task);
+        resolveStatusAndUpdate(task, result);
         return result;   
     }
 
-    private void resolveStatusAndUpdate(Task task) {
+    private void resolveStatusAndUpdate(Task task, IAnyResource executionResult) {
         //create extension countExecuted to determine completed
         //or use Timing count compared to event *Ask Bryn whether event is a record or directive*
-        task.setStatus(TaskStatus.COMPLETED);
+        TaskOutputComponent taskOutputComponent = new TaskOutputComponent();
+        CodeableConcept typeCodeableConcept = new CodeableConcept();
+        taskOutputComponent.setType(typeCodeableConcept);
+        Reference resultReference = new Reference();
+        resultReference.setType(executionResult.fhirType());
+        resultReference.setReference(executionResult.getId());
+        taskOutputComponent.setValue(resultReference);
+        task.addOutput(taskOutputComponent);
         workFlowClient.update().resource(task).execute();
         List<Reference> basedOnReferences = task.getBasedOn();
         if (basedOnReferences.isEmpty() || basedOnReferences == null) {

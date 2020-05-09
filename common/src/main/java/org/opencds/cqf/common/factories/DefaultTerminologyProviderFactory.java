@@ -1,17 +1,16 @@
-  
+
 package org.opencds.cqf.common.factories;
 
-import org.opencds.cqf.cql.terminology.TerminologyProvider;
+import org.opencds.cqf.cql.engine.terminology.TerminologyProvider;
+import org.opencds.cqf.cql.service.factory.TerminologyProviderFactory;
 import org.apache.commons.lang3.tuple.Pair;
 import org.opencds.cqf.common.helpers.ClientHelper;
 import org.opencds.cqf.common.providers.Dstu3ApelonFhirTerminologyProvider;
 import org.opencds.cqf.common.providers.R4ApelonFhirTerminologyProvider;
-import org.opencds.cqf.cql.terminology.fhir.Dstu3FhirTerminologyProvider;
-import org.opencds.cqf.cql.terminology.fhir.R4FhirTerminologyProvider;
+import org.opencds.cqf.cql.engine.fhir.terminology.Dstu3FhirTerminologyProvider;
+import org.opencds.cqf.cql.engine.fhir.terminology.R4FhirTerminologyProvider;
 
 import java.util.Map;
-
-import com.alphora.cql.service.factory.TerminologyProviderFactory;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.client.api.IGenericClient;

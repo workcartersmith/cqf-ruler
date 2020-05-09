@@ -1,12 +1,12 @@
   
 package org.opencds.cqf.common.factories;
 
-import org.opencds.cqf.cql.data.CompositeDataProvider;
-import org.opencds.cqf.cql.data.DataProvider;
-import org.opencds.cqf.cql.model.Dstu3FhirModelResolver;
-import org.opencds.cqf.cql.model.R4FhirModelResolver;
-import org.opencds.cqf.cql.searchparam.SearchParameterResolver;
-import org.opencds.cqf.cql.terminology.TerminologyProvider;
+import org.opencds.cqf.cql.engine.data.CompositeDataProvider;
+import org.opencds.cqf.cql.engine.data.DataProvider;
+import org.opencds.cqf.cql.engine.fhir.model.Dstu3FhirModelResolver;
+import org.opencds.cqf.cql.engine.fhir.model.R4FhirModelResolver;
+import org.opencds.cqf.cql.engine.fhir.searchparam.SearchParameterResolver;
+import org.opencds.cqf.cql.engine.terminology.TerminologyProvider;
 import org.cqframework.cql.elm.execution.Library;
 import org.cqframework.cql.elm.execution.VersionedIdentifier;
 import org.cqframework.cql.elm.execution.UsingDef;
@@ -14,13 +14,14 @@ import org.cqframework.cql.elm.execution.UsingDef;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.alphora.cql.service.factory.DataProviderFactory;
+import org.opencds.cqf.cql.service.factory.DataProviderFactory;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.opencds.cqf.common.helpers.ClientHelper;
 import org.opencds.cqf.common.retrieve.JpaFhirRetrieveProvider;
 
 import ca.uhn.fhir.context.FhirContext;
+
 import ca.uhn.fhir.jpa.dao.DaoRegistry;
 import ca.uhn.fhir.rest.client.api.IGenericClient;
 

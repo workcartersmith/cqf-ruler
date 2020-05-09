@@ -1,12 +1,12 @@
 package org.opencds.cqf.r4.providers;
 
-import com.alphora.cql.service.factory.DataProviderFactory;
+import org.opencds.cqf.cql.service.factory.DataProviderFactory;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.Endpoint;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.Resource;
 import org.opencds.cqf.common.providers.LibraryResolutionProvider;
-import org.opencds.cqf.cql.terminology.TerminologyProvider;
+import org.opencds.cqf.cql.engine.terminology.TerminologyProvider;
 import org.opencds.cqf.r4.processors.CqlExecutionProcessor;
 
 import ca.uhn.fhir.context.FhirContext;

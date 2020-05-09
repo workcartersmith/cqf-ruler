@@ -10,13 +10,14 @@ import java.util.Map;
 
 import java.util.Map.Entry;
 
-import com.alphora.cql.service.Response;
-import com.alphora.cql.service.Service;
-import com.alphora.cql.service.factory.DataProviderFactory;
+import org.opencds.cqf.cql.service.Response;
+import org.opencds.cqf.cql.service.Service;
+import org.opencds.cqf.cql.service.factory.DataProviderFactory;
 import org.opencds.cqf.common.factories.DefaultTerminologyProviderFactory;
-import com.alphora.cql.service.factory.TerminologyProviderFactory;
+import org.opencds.cqf.cql.service.factory.TerminologyProviderFactory;
 
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.commons.lang3.tuple.Triple;
 import org.cqframework.cql.cql2elm.CqlTranslator;
 import org.cqframework.cql.cql2elm.CqlTranslatorException;
 import org.cqframework.cql.elm.execution.VersionedIdentifier;
@@ -42,17 +43,27 @@ import org.opencds.cqf.dstu3.factories.DefaultLibraryLoaderFactory;
 import org.opencds.cqf.common.helpers.ClientHelper;
 import org.opencds.cqf.common.helpers.DateHelper;
 import org.opencds.cqf.common.helpers.TranslatorHelper;
-import org.opencds.cqf.cql.runtime.DateTime;
-import org.opencds.cqf.cql.runtime.Interval;
-import org.opencds.cqf.cql.terminology.TerminologyProvider;
+// import org.opencds.cqf.cql.runtime.DateTime;
+// import org.opencds.cqf.cql.runtime.Interval;
+import org.opencds.cqf.cql.engine.terminology.TerminologyProvider;
 import org.opencds.cqf.dstu3.helpers.FhirMeasureBundler;
 import org.opencds.cqf.dstu3.helpers.LibraryHelper;
 import org.opencds.cqf.common.providers.LibraryResolutionProvider;
-import org.opencds.cqf.cql.execution.LibraryResult;
 
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
+import org.opencds.cqf.common.helpers.UsingHelper;
+import org.opencds.cqf.common.providers.LibraryResolutionProvider;
+import org.opencds.cqf.cql.engine.data.DataProvider;
+import org.opencds.cqf.cql.engine.execution.Context;
+import org.opencds.cqf.cql.engine.runtime.DateTime;
+import org.opencds.cqf.cql.engine.runtime.Interval;
+//import org.opencds.cqf.cql.engine.terminology.TerminologyProvider;
+import org.opencds.cqf.dstu3.helpers.FhirMeasureBundler;
+import org.opencds.cqf.dstu3.helpers.LibraryHelper;
 
+import ca.uhn.fhir.rest.annotation.Operation;
+import ca.uhn.fhir.rest.annotation.OperationParam;
 import ca.uhn.fhir.context.FhirContext;
 
 /**
@@ -172,7 +183,7 @@ public class CqlExecutionProvider {
     }
 
     private Object evaluateLocalLibrary(IBaseResource resource, String libraryContent, TerminologyProviderFactory terminologyProviderFactory) {
-        com.alphora.cql.service.Parameters parameters = new com.alphora.cql.service.Parameters();
+        org.opencds.cqf.cql.service.Parameters parameters = new org.opencds.cqf.cql.service.Parameters();
         parameters.libraries = Collections.singletonList(libraryContent);
         parameters.expressions = Collections.singletonList(Pair.of("LocalLibrary", "Expression"));
         parameters.parameters = Collections.singletonMap(Pair.of(null, resource.fhirType()), resource);
@@ -180,8 +191,7 @@ public class CqlExecutionProvider {
         Service service = new Service(libraryFactory, this.dataProviderFactory, terminologyProviderFactory, null, null, null, null);
         Response response = service.evaluate(parameters);
 
-        return response.evaluationResult.forLibrary(new VersionedIdentifier().withId("LocalLibrary"))
-                .forExpression("Expression");
+        return response.evaluationResult.forExpression("Expression");
     }
 
     public Object evaluateInContext(DomainResource instance, String cqlName, String patientId, Boolean aliasedExpression) {
@@ -206,7 +216,7 @@ public class CqlExecutionProvider {
 
                 //TODO: resolveContextParameters i.e. patient
                 DefaultLibraryLoaderFactory libraryFactory = new DefaultLibraryLoaderFactory(this.getLibraryResourceProvider());
-                com.alphora.cql.service.Parameters parameters = new com.alphora.cql.service.Parameters();
+                org.opencds.cqf.cql.service.Parameters parameters = new org.opencds.cqf.cql.service.Parameters();
                 Map<Pair<String, String>, Object> parametersMap = new HashMap<Pair<String, String>, Object>();
                 parameters.libraryName = library.getIdentifier().getId();
                 parameters.libraries = libraries;
@@ -217,7 +227,7 @@ public class CqlExecutionProvider {
                 
                 Response response = service.evaluate(parameters);
 
-                result = response.evaluationResult.forLibrary(library.getIdentifier()).forExpression(cqlName);
+                result = response.evaluationResult.forExpression(cqlName);
                 return result;
             }
             throw new RuntimeException("Could not find Expression in Referenced Libraries");
@@ -234,11 +244,10 @@ public class CqlExecutionProvider {
             @OperationParam(name="periodEnd") String periodEnd,
             @OperationParam(name="productLine") String productLine,
 			@OperationParam(name = "context") String contextParam,
-            @OperationParam(name = "executionResults") String executionResults,
             @OperationParam(name = "endpoint") Endpoint endpoint,
             @OperationParam(name = "parameters") Parameters parameters) {
 
-        if (patientId == null && contextParam != null && contextParam.equals("Patient") ) {
+        if (patientId == null && contextParam != null && contextParam.equals("Patient")) {
             throw new IllegalArgumentException("Must specify a patientId when executing in Patient context.");
         }
 
@@ -258,8 +267,8 @@ public class CqlExecutionProvider {
                     Parameters result = new Parameters();
                     TrackBack tb = cte.getLocator();
                     if (tb != null) {
-                       String location = String.format("[%d:%d]",tb.getStartLine(), tb.getStartChar());
-                       result.addParameter().setName("location").setValue(new StringType(location));
+                        String location = String.format("[%d:%d]", tb.getStartLine(), tb.getStartChar());
+                        result.addParameter().setName("location").setValue(new StringType(location));
                     }
 
                     result.setId("Error");
@@ -279,6 +288,13 @@ public class CqlExecutionProvider {
 
         org.cqframework.cql.elm.execution.Library library = TranslatorHelper.translateLibrary(translator);
 
+        List<Triple<String, String, String>> usingDefs = UsingHelper.getUsingUrlAndVersion(library.getUsings());
+
+        if (usingDefs.size() > 1) {
+            throw new IllegalArgumentException(
+                    "Evaluation of Measure using multiple Models is not supported at this time.");
+        }
+
         Map<Pair<String, String>, Object> parametersMap = new HashMap<Pair<String, String>, Object>();
 
         if (parameters != null)
@@ -292,7 +308,7 @@ public class CqlExecutionProvider {
         if (periodStart != null && periodEnd != null) {
             // resolve the measurement period
             Interval measurementPeriod = new Interval(DateHelper.resolveRequestDate(periodStart, true), true,
-            DateHelper.resolveRequestDate(periodEnd, false), true);
+                    DateHelper.resolveRequestDate(periodEnd, false), true);
 
             parametersMap.put(Pair.of(null, "Measurement Period"),
                     new Interval(DateTime.fromJavaDate((Date) measurementPeriod.getStart()), true,
@@ -304,7 +320,7 @@ public class CqlExecutionProvider {
         }
 
         //TODO: resolveContextParameters i.e. patient
-        com.alphora.cql.service.Parameters evaluationParameters = new com.alphora.cql.service.Parameters();
+        org.opencds.cqf.cql.service.Parameters evaluationParameters = new org.opencds.cqf.cql.service.Parameters();
         Map<String, Endpoint> endpointIndex = new HashMap<String, Endpoint>();
         if(endpoint != null) {
             endpointIndex.put(endpoint.getAddress(), endpoint);
@@ -322,13 +338,11 @@ public class CqlExecutionProvider {
         try {
             Service service = new Service(libraryFactory, dataProviderFactory, terminologyProviderFactory, null, null, null, null);
             Response response = service.evaluate(evaluationParameters);
-            
-            for (Entry<VersionedIdentifier, LibraryResult> libraryEntry : response.evaluationResult.libraryResults.entrySet()) {
-                for (Entry<String, Object> expressionEntry : libraryEntry.getValue().expressionResults.entrySet()) {
+                for (Entry<String, Object> expressionEntry : response.evaluationResult.expressionResults.entrySet()) {
                     Object res = expressionEntry.getValue();
+                    String executionResults = res.toString();
                     result = getResult(res, executionResults);
                 }
-            }
         }
         catch (RuntimeException re) {
             re.printStackTrace();
@@ -382,9 +396,12 @@ public class CqlExecutionProvider {
     private String resolveType(Object result) {
         String type = result == null ? "Null" : result.getClass().getSimpleName();
         switch (type) {
-            case "BigDecimal": return "Decimal";
-            case "ArrayList": return "List";
-            case "FhirBundleCursor": return "Retrieve";
+            case "BigDecimal":
+                return "Decimal";
+            case "ArrayList":
+                return "List";
+            case "FhirBundleCursor":
+                return "Retrieve";
         }
         return type;
     }

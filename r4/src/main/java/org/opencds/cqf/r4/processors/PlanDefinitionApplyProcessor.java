@@ -34,10 +34,10 @@ import org.hl7.fhir.r4.model.PlanDefinition.PlanDefinitionActionRelatedActionCom
 import org.opencds.cqf.common.config.HapiProperties;
 import org.opencds.cqf.common.exceptions.NotImplementedException;
 import org.opencds.cqf.common.helpers.ClientHelper;
-import org.opencds.cqf.cql.execution.Context;
-import org.opencds.cqf.cql.model.ModelResolver;
-import org.opencds.cqf.cql.model.R4FhirModelResolver;
-import org.opencds.cqf.cql.runtime.DateTime;
+import org.opencds.cqf.cql.engine.model.ModelResolver;
+import org.opencds.cqf.cql.engine.execution.Context;
+import org.opencds.cqf.cql.engine.fhir.model.R4FhirModelResolver;
+import org.opencds.cqf.cql.engine.runtime.DateTime;
 import org.opencds.cqf.r4.builders.AttachmentBuilder;
 import org.opencds.cqf.r4.builders.CarePlanActivityBuilder;
 import org.opencds.cqf.r4.builders.CarePlanBuilder;
@@ -175,7 +175,7 @@ public class PlanDefinitionApplyProcessor {
 
                     applyAction(session, result, action);
                     session.getCarePlanBuilder().buildContained(result).buildActivity(
-                            new CarePlanActivityBuilder().buildReference(new Reference("#" + result.getId())).build());
+                            new CarePlanActivityBuilder().buildReference(new Reference("#" + result.getId()).setType(result.fhirType())).build());
                 } catch (Exception e) {
                     PlanDefinitionApplyProvider.logger.error(
                             "ERROR: ActivityDefinition %s could not be applied and threw exception %s",
@@ -203,7 +203,7 @@ public class PlanDefinitionApplyProcessor {
                 for (CodeableConcept actionCode : action.getCode()) {
                     Boolean foundExecutableTaskCode = false;
                     for (Coding actionCoding : actionCode.getCoding()) {
-                        if (actionCoding.getSystem().equals("http://hl7.org/fhir/aphl/CodeSystem/executable-task")) {
+                        if (actionCoding.getSystem().equals("http://aphl.org/fhir/ecr/CodeSystem/executable-task-types")) {
                             foundExecutableTaskCode = true;
                         }
                     }
@@ -221,6 +221,7 @@ public class PlanDefinitionApplyProcessor {
                     offsetExtension.setUrl("http://hl7.org/fhir/aphl/StructureDefinition/offset");
                     offsetExtension.setValue(relatedAction.getOffset());
                     task.addExtension(offsetExtension);
+                    
                 }
             }
         }
@@ -241,7 +242,7 @@ public class PlanDefinitionApplyProcessor {
                 }
             }
         }
-        task.addBasedOn(new Reference(session.getCarePlan()));
+        task.addBasedOn(new Reference(session.getCarePlan()).setType(session.getCarePlan().fhirType()));
         return task;
     }
 
