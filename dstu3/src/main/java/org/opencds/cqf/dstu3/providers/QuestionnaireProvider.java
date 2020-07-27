@@ -24,8 +24,10 @@ public class QuestionnaireProvider {
                 throw new IllegalArgumentException("Unable to perform operation $extract.  The QuestionnaireResponse was null");
         }
         Bundle observationsFromQuestionnaireResponse = createObservationBundle(questionnaireResponse);
-        Bundle returnBundle = sendObservationBundle(observationsFromQuestionnaireResponse);
-        return returnBundle;
+        if(HapiProperties.getQuestionnaireResponseExtractStoreResult()) {
+            return sendObservationBundle(observationsFromQuestionnaireResponse);
+        }
+        return observationsFromQuestionnaireResponse;
     }
 
     private Bundle createObservationBundle(QuestionnaireResponse questionnaireResponse){

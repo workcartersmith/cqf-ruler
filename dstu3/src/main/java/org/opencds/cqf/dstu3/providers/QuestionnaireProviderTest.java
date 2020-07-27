@@ -1,15 +1,19 @@
-package org.opencds.cqf.r4.providers;
+package org.opencds.cqf.dstu3.providers;
 
 import com.google.common.base.Charsets;
 import org.apache.commons.io.IOUtils;
-import org.hl7.fhir.r4.model.*;
-import org.junit.jupiter.api.Test;
+import org.hl7.fhir.dstu3.model.Bundle;
+import org.hl7.fhir.dstu3.model.Extension;
+import org.hl7.fhir.dstu3.model.Observation;
+import org.hl7.fhir.dstu3.model.QuestionnaireResponse;
+import org.junit.jupiter.api.*;
 import static org.junit.jupiter.api.Assertions.*;
 import ca.uhn.fhir.context.FhirContext;
 
 import java.io.*;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 
 class QuestionnaireProviderTest{
@@ -20,9 +24,8 @@ class QuestionnaireProviderTest{
             InputStream in = this.getClass().getClassLoader().getResourceAsStream("questionnaireResponses/QR.json");
             String qrStr = IOUtils.toString(in, Charsets.UTF_8);
             QuestionnaireResponse qrOut = new QuestionnaireResponse();
-//                static FhirContext fhirContextClinical = FhirContext.forDstu3();
-            FhirContext fhirContextR4 = FhirContext.forR4();
-            qrOut = (QuestionnaireResponse) fhirContextR4.newJsonParser().parseResource(qrStr);
+            FhirContext fhirContextDStu3 = FhirContext.forDstu3();
+            qrOut = (QuestionnaireResponse) fhirContextDStu3.newJsonParser().parseResource(qrStr);
 
             QuestionnaireProvider questionnaireProvider = new QuestionnaireProvider(null);
             Bundle obsBundle = questionnaireProvider.extractObservationFromQuestionnaireResponse(qrOut);
@@ -36,7 +39,7 @@ class QuestionnaireProviderTest{
         HashMap observationMap = extractObsValues(obsBundle);
         qrOut.getItem().forEach(item ->{
             String obsKey = item.getLinkId();
-            assertNotNull(observationMap.get(item.getLinkId()), "LinkId " + item.getLinkId() + " did not process correctly");
+            assertNotNull(observationMap.get(item.getLinkId()));
             switch(item.getAnswer().get(0).getValue().fhirType()){
                 case "string":
                     assertEquals(observationMap.get(item.getLinkId()), item.getAnswer().get(0).getValue().toString(), "LinkId " + item.getLinkId() + " did not process correctly");
@@ -51,7 +54,7 @@ class QuestionnaireProviderTest{
 //            assertEquals(observationMap.get(item.getLinkId()), item."");
 
         });
-System.out.println("done with stuff");
+        System.out.println("done with stuff");
     }
 
     private HashMap extractObsValues(Bundle obsBundle){
@@ -60,7 +63,7 @@ System.out.println("done with stuff");
             Observation obs = (Observation) entry.getResource();
             String key = getLinkId(obs.getExtension());
             assertNotNull(obs.getValue(), "Observation with id : " + obs.getId() + " is null.");
-            switch(obs.getValue().fhirType()){
+            switch (obs.getValue().fhirType()) {
                 case "string":
                     obsMap.put(key, obs.getValueStringType().getValue());
                     break;
