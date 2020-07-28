@@ -13,7 +13,6 @@ import ca.uhn.fhir.context.FhirContext;
 import java.io.*;
 import java.util.HashMap;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 
 
 class QuestionnaireProviderTest{
@@ -27,7 +26,7 @@ class QuestionnaireProviderTest{
             FhirContext fhirContextDStu3 = FhirContext.forDstu3();
             qrOut = (QuestionnaireResponse) fhirContextDStu3.newJsonParser().parseResource(qrStr);
 
-            QuestionnaireProvider questionnaireProvider = new QuestionnaireProvider(null);
+            QuestionnaireProvider questionnaireProvider = new QuestionnaireProvider(fhirContextDStu3);
             Bundle obsBundle = questionnaireProvider.extractObservationFromQuestionnaireResponse(qrOut);
             checkResults(obsBundle, qrOut);
         } catch (IOException e) {

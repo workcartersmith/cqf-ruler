@@ -24,7 +24,7 @@ class QuestionnaireProviderTest{
             FhirContext fhirContextR4 = FhirContext.forR4();
             qrOut = (QuestionnaireResponse) fhirContextR4.newJsonParser().parseResource(qrStr);
 
-            QuestionnaireProvider questionnaireProvider = new QuestionnaireProvider(null);
+            QuestionnaireProvider questionnaireProvider = new QuestionnaireProvider(fhirContextR4);
             Bundle obsBundle = questionnaireProvider.extractObservationFromQuestionnaireResponse(qrOut);
             checkResults(obsBundle, qrOut);
         } catch (IOException e) {
