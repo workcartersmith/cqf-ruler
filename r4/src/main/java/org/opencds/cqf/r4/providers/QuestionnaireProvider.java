@@ -12,6 +12,11 @@ import java.util.Date;
 
 import static org.opencds.cqf.common.helpers.ClientHelper.getClient;
 
+/**
+ * This implementation is based on the Observation-based extraction mechanism as described in http://hl7.org/fhir/uv/sdc/2019May/extraction.html#designing-questionnaires-to-support-data-extraction
+ *
+ */
+
 public class QuestionnaireProvider {
 
     private FhirContext fhirContext;
@@ -77,13 +82,6 @@ public class QuestionnaireProvider {
         Extension linkIdExtension = new Extension();
         linkIdExtension.setUrl("http://hl7.org/fhir/uv/sdc/StructureDefinition/derivedFromLinkId");
         linkIdExtension.setValue(new StringType(item.getLinkId()));
-//   Extension refExtension = new Extension();
-//        refExtension.setUrl(ExtensionEnum.GRCONTAINED.getUrl());
-//        if(!mReport.hasId()){
-//            mReport.setId(UUID.randomUUID().toString());
-//        }
-//        refExtension.setValue(new Reference("#" + mReport.getId()));
-//        newGuidanceResponse.addExtension(refExtension);        obs.
         obs.addExtension(linkIdExtension);
         Bundle.BundleEntryRequestComponent berc = new Bundle.BundleEntryRequestComponent();
         berc.setMethod(Bundle.HTTPVerb.PUT);
