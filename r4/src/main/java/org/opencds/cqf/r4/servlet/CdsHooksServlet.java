@@ -13,6 +13,8 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import ca.uhn.fhir.context.support.IValidationSupport;
+import ca.uhn.fhir.jpa.validation.JpaValidationSupportChain;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
@@ -50,11 +52,15 @@ import org.opencds.cqf.r4.providers.JpaTerminologyProvider;
 import org.opencds.cqf.r4.providers.PlanDefinitionApplyProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationContext;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
+
+import static ca.uhn.fhir.jpa.config.BaseConfig.JPA_VALIDATION_SUPPORT_CHAIN;
 
 @WebServlet(name = "cds-services")
 public class CdsHooksServlet extends HttpServlet {
@@ -70,6 +76,8 @@ public class CdsHooksServlet extends HttpServlet {
 
     private org.opencds.cqf.r4.providers.JpaTerminologyProvider jpaTerminologyProvider;
 
+    public IValidationSupport jpaValidationSupportChain;
+
     private ProviderConfiguration providerConfiguration;
 
     @SuppressWarnings("unchecked")
@@ -84,6 +92,7 @@ public class CdsHooksServlet extends HttpServlet {
         this.libraryResolutionProvider = (LibraryResolutionProvider<org.hl7.fhir.r4.model.Library>)appCtx.getBean(LibraryResolutionProvider.class);
         this.fhirRetrieveProvider = appCtx.getBean(JpaFhirRetrieveProvider.class);
         this.jpaTerminologyProvider = appCtx.getBean(JpaTerminologyProvider.class);
+        this.jpaValidationSupportChain = appCtx.getBean(JPA_VALIDATION_SUPPORT_CHAIN, IValidationSupport.class);
     }
 
     protected ProviderConfiguration getProviderConfiguration() {

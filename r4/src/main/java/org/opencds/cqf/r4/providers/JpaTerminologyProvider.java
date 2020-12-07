@@ -1,10 +1,16 @@
 package org.opencds.cqf.r4.providers;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import javax.inject.Inject;
-
+import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.context.support.IValidationSupport;
+import ca.uhn.fhir.context.support.IValidationSupport.LookupCodeResult;
+import ca.uhn.fhir.context.support.ValidationSupportContext;
+import ca.uhn.fhir.context.support.ValueSetExpansionOptions;
+import ca.uhn.fhir.jpa.rp.r4.ValueSetResourceProvider;
+import ca.uhn.fhir.jpa.searchparam.SearchParameterMap;
+import ca.uhn.fhir.jpa.term.api.ITermReadSvcR4;
+import ca.uhn.fhir.rest.api.server.IBundleProvider;
+import ca.uhn.fhir.rest.param.UriParam;
+import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.IdType;
 import org.hl7.fhir.r4.model.ValueSet;
@@ -15,28 +21,23 @@ import org.opencds.cqf.cql.engine.terminology.TerminologyProvider;
 import org.opencds.cqf.cql.engine.terminology.ValueSetInfo;
 import org.springframework.stereotype.Component;
 
-import ca.uhn.fhir.context.FhirContext;
-import ca.uhn.fhir.context.support.ValueSetExpansionOptions;
-import ca.uhn.fhir.context.support.IValidationSupport.LookupCodeResult;
-import ca.uhn.fhir.jpa.rp.r4.ValueSetResourceProvider;
-import ca.uhn.fhir.jpa.searchparam.SearchParameterMap;
-import ca.uhn.fhir.util.VersionIndependentConcept;
-import ca.uhn.fhir.jpa.term.api.ITermReadSvcR4;
-import ca.uhn.fhir.rest.api.server.IBundleProvider;
-import ca.uhn.fhir.rest.param.UriParam;
-import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
+import javax.inject.Inject;
+import java.util.ArrayList;
+import java.util.List;
 
 @Component
 public class JpaTerminologyProvider implements TerminologyProvider {
 
     private ITermReadSvcR4 terminologySvcR4;
     private ValueSetResourceProvider valueSetResourceProvider;
+    private final IValidationSupport validationSupport;
 
     @Inject
     public JpaTerminologyProvider(ITermReadSvcR4 terminologySvcR4, FhirContext context,
-            ValueSetResourceProvider valueSetResourceProvider) {
+                                  ValueSetResourceProvider valueSetResourceProvider, IValidationSupport validationSupport) {
         this.terminologySvcR4 = terminologySvcR4;
         this.valueSetResourceProvider = valueSetResourceProvider;
+        this.validationSupport = validationSupport;
     }
 
     @Override
@@ -108,18 +109,17 @@ public class JpaTerminologyProvider implements TerminologyProvider {
 
         }
 
-        List<VersionIndependentConcept> expansion = terminologySvcR4
-                .expandValueSet(new ValueSetExpansionOptions().setCount(Integer.MAX_VALUE), valueSet.getId());
-        for (VersionIndependentConcept concept : expansion) {
-            codes.add(new Code().withCode(concept.getCode()).withSystem(concept.getSystem()));
-        }
+        ValueSet expansion = terminologySvcR4
+                .expandValueSet(new ValueSetExpansionOptions().setCount(Integer.MAX_VALUE), valueSet.getId(), null);
+        expansion.getExpansion().getContains()
+                .forEach(concept -> codes.add(new Code().withCode(concept.getCode()).withSystem(concept.getSystem())));
 
         return codes;
     }
 
     @Override
     public synchronized Code lookup(Code code, CodeSystemInfo codeSystem) throws ResourceNotFoundException {
-        LookupCodeResult cs = terminologySvcR4.lookupCode(terminologySvcR4, codeSystem.getId(), code.getCode());
+        LookupCodeResult cs = terminologySvcR4.lookupCode(new ValidationSupportContext(validationSupport), codeSystem.getId(), code.getCode());
 
         code.setDisplay(cs.getCodeDisplay());
         code.setSystem(codeSystem.getId());

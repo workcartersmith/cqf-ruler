@@ -1,27 +1,9 @@
 package org.opencds.cqf.dstu3.servlet;
 
-import java.util.Arrays;
-import java.util.List;
-
-import javax.servlet.ServletException;
-
-import org.hl7.fhir.dstu3.model.Bundle;
-import org.hl7.fhir.dstu3.model.Meta;
-import org.opencds.cqf.common.config.HapiProperties;
-import org.opencds.cqf.dstu3.providers.CqfRulerJpaConformanceProviderDstu3;
-import org.opencds.cqf.dstu3.providers.OAuthProvider;
-import org.opencds.cqf.tooling.measure.stu3.CodeTerminologyRef;
-import org.opencds.cqf.tooling.measure.stu3.CqfMeasure;
-import org.opencds.cqf.tooling.measure.stu3.PopulationCriteriaMap;
-import org.opencds.cqf.tooling.measure.stu3.VersionedTerminologyRef;
-import org.springframework.context.ApplicationContext;
-import org.springframework.web.cors.CorsConfiguration;
-
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.jpa.api.config.DaoConfig;
 import ca.uhn.fhir.jpa.api.dao.DaoRegistry;
 import ca.uhn.fhir.jpa.api.dao.IFhirSystemDao;
-import ca.uhn.fhir.jpa.api.rp.ResourceProviderFactory;
 import ca.uhn.fhir.jpa.provider.TerminologyUploaderProvider;
 import ca.uhn.fhir.jpa.provider.dstu3.JpaConformanceProviderDstu3;
 import ca.uhn.fhir.jpa.provider.dstu3.JpaSystemProviderDstu3;
@@ -34,6 +16,22 @@ import ca.uhn.fhir.rest.server.RestfulServer;
 import ca.uhn.fhir.rest.server.interceptor.CorsInterceptor;
 import ca.uhn.fhir.rest.server.interceptor.LoggingInterceptor;
 import ca.uhn.fhir.rest.server.interceptor.ResponseHighlighterInterceptor;
+import ca.uhn.fhir.rest.server.provider.ResourceProviderFactory;
+import org.hl7.fhir.dstu3.model.Bundle;
+import org.hl7.fhir.dstu3.model.Meta;
+import org.opencds.cqf.common.config.HapiProperties;
+import org.opencds.cqf.dstu3.providers.CqfRulerJpaConformanceProviderDstu3;
+import org.opencds.cqf.dstu3.providers.OAuthProvider;
+import org.opencds.cqf.tooling.measure.stu3.CodeTerminologyRef;
+import org.opencds.cqf.tooling.measure.stu3.CqfMeasure;
+import org.opencds.cqf.tooling.measure.stu3.PopulationCriteriaMap;
+import org.opencds.cqf.tooling.measure.stu3.VersionedTerminologyRef;
+import org.springframework.context.ApplicationContext;
+import org.springframework.web.cors.CorsConfiguration;
+
+import javax.servlet.ServletException;
+import java.util.Arrays;
+import java.util.List;
 
 public class BaseServlet extends RestfulServer {
     private static final long serialVersionUID = 1L;
