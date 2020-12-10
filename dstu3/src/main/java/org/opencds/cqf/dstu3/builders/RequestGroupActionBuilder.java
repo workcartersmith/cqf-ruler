@@ -10,7 +10,7 @@ import org.hl7.fhir.dstu3.model.RelatedArtifact;
 import org.hl7.fhir.dstu3.model.RequestGroup;
 import org.hl7.fhir.dstu3.model.Resource;
 import org.hl7.fhir.dstu3.model.StringType;
-import org.opencds.cqf.common.builders.BaseBuilder;
+import ca.uhn.fhir.cql.common.builder.BaseBuilder;
 
 public class RequestGroupActionBuilder extends BaseBuilder<RequestGroup.RequestGroupActionComponent> {
 

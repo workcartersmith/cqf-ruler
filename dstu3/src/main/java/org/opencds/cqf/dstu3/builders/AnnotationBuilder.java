@@ -4,7 +4,7 @@ import java.util.Date;
 
 import org.hl7.fhir.dstu3.model.Annotation;
 import org.hl7.fhir.dstu3.model.Type;
-import org.opencds.cqf.common.builders.BaseBuilder;
+import ca.uhn.fhir.cql.common.builder.BaseBuilder;
 
 public class AnnotationBuilder extends BaseBuilder<Annotation> {
 

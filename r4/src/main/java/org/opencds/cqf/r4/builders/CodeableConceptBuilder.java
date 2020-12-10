@@ -5,7 +5,7 @@ import java.util.List;
 
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
-import org.opencds.cqf.common.builders.BaseBuilder;
+import ca.uhn.fhir.cql.common.builder.BaseBuilder;
 
 public class CodeableConceptBuilder extends BaseBuilder<CodeableConcept> {
 

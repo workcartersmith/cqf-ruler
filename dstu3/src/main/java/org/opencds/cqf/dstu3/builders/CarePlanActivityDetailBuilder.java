@@ -9,7 +9,7 @@ import org.hl7.fhir.dstu3.model.Reference;
 import org.hl7.fhir.dstu3.model.SimpleQuantity;
 import org.hl7.fhir.dstu3.model.Type;
 import org.hl7.fhir.exceptions.FHIRException;
-import org.opencds.cqf.common.builders.BaseBuilder;
+import ca.uhn.fhir.cql.common.builder.BaseBuilder;
 
 public class CarePlanActivityDetailBuilder extends BaseBuilder<CarePlan.CarePlanActivityDetailComponent> {
 

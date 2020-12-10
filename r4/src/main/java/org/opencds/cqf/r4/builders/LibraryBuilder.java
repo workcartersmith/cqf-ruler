@@ -7,7 +7,7 @@ import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Enumerations;
 import org.hl7.fhir.r4.model.Library;
 import org.hl7.fhir.r4.model.codesystems.LibraryType;
-import org.opencds.cqf.common.builders.BaseBuilder;
+import ca.uhn.fhir.cql.common.builder.BaseBuilder;
 
 public class LibraryBuilder extends BaseBuilder<Library> {
 

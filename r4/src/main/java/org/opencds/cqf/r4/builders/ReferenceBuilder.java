@@ -2,7 +2,7 @@ package org.opencds.cqf.r4.builders;
 
 import org.hl7.fhir.r4.model.Identifier;
 import org.hl7.fhir.r4.model.Reference;
-import org.opencds.cqf.common.builders.BaseBuilder;
+import ca.uhn.fhir.cql.common.builder.BaseBuilder;
 
 public class ReferenceBuilder extends BaseBuilder<Reference> {
 

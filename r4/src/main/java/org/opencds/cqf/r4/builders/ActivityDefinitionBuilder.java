@@ -4,7 +4,7 @@ import org.hl7.fhir.r4.model.ActivityDefinition;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations;
 import org.hl7.fhir.r4.model.Expression;
-import org.opencds.cqf.common.builders.BaseBuilder;
+import ca.uhn.fhir.cql.common.builder.BaseBuilder;
 
 public class ActivityDefinitionBuilder extends BaseBuilder<ActivityDefinition> {
 

@@ -3,7 +3,7 @@ package org.opencds.cqf.dstu3.builders;
 import org.hl7.fhir.dstu3.model.Attachment;
 import org.hl7.fhir.dstu3.model.RelatedArtifact;
 import org.hl7.fhir.exceptions.FHIRException;
-import org.opencds.cqf.common.builders.BaseBuilder;
+import ca.uhn.fhir.cql.common.builder.BaseBuilder;
 
 public class RelatedArtifactBuilder extends BaseBuilder<RelatedArtifact> {
 

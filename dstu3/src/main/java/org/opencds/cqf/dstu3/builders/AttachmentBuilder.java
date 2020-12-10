@@ -4,7 +4,7 @@ import java.util.List;
 
 import org.hl7.fhir.dstu3.model.Attachment;
 import org.hl7.fhir.dstu3.model.Extension;
-import org.opencds.cqf.common.builders.BaseBuilder;
+import ca.uhn.fhir.cql.common.builder.BaseBuilder;
 
 public class AttachmentBuilder extends BaseBuilder<Attachment> {
 

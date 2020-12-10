@@ -9,6 +9,11 @@ import java.util.Map;
 
 import javax.inject.Inject;
 
+import ca.uhn.fhir.cql.common.evaluation.LibraryLoader;
+import ca.uhn.fhir.cql.common.helper.TranslatorHelper;
+import ca.uhn.fhir.cql.common.provider.EvaluationProviderFactory;
+import ca.uhn.fhir.cql.common.provider.LibraryResolutionProvider;
+import ca.uhn.fhir.cql.dstu3.helper.LibraryHelper;
 import org.apache.commons.lang3.tuple.Triple;
 import org.cqframework.cql.cql2elm.CqlTranslator;
 import org.cqframework.cql.cql2elm.CqlTranslatorException;
@@ -26,19 +31,14 @@ import org.hl7.fhir.dstu3.model.Reference;
 import org.hl7.fhir.dstu3.model.Resource;
 import org.hl7.fhir.dstu3.model.StringType;
 import org.hl7.fhir.dstu3.model.Type;
-import org.opencds.cqf.common.evaluation.EvaluationProviderFactory;
-import org.opencds.cqf.common.evaluation.LibraryLoader;
-import org.opencds.cqf.common.helpers.DateHelper;
-import org.opencds.cqf.common.helpers.TranslatorHelper;
-import org.opencds.cqf.common.helpers.UsingHelper;
-import org.opencds.cqf.common.providers.LibraryResolutionProvider;
+import ca.uhn.fhir.cql.common.helper.DateHelper;
+import ca.uhn.fhir.cql.common.helper.UsingHelper;
 import org.opencds.cqf.cql.engine.data.DataProvider;
 import org.opencds.cqf.cql.engine.execution.Context;
 import org.opencds.cqf.cql.engine.runtime.DateTime;
 import org.opencds.cqf.cql.engine.runtime.Interval;
 import org.opencds.cqf.cql.engine.terminology.TerminologyProvider;
-import org.opencds.cqf.dstu3.helpers.FhirMeasureBundler;
-import org.opencds.cqf.dstu3.helpers.LibraryHelper;
+import ca.uhn.fhir.cql.dstu3.helper.FhirMeasureBundler;
 import org.springframework.stereotype.Component;
 
 import ca.uhn.fhir.rest.annotation.Operation;

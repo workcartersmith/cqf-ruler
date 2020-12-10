@@ -6,7 +6,7 @@ import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.r4.model.Extension;
 import org.hl7.fhir.r4.model.RequestGroup;
 import org.hl7.fhir.r4.model.Resource;
-import org.opencds.cqf.common.builders.BaseBuilder;
+import ca.uhn.fhir.cql.common.builder.BaseBuilder;
 
 public class RequestGroupBuilder extends BaseBuilder<RequestGroup> {
 

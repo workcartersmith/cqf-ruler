@@ -14,7 +14,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import ca.uhn.fhir.context.support.IValidationSupport;
-import ca.uhn.fhir.jpa.validation.JpaValidationSupportChain;
+import ca.uhn.fhir.cql.common.provider.LibraryResolutionProvider;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
@@ -38,8 +38,7 @@ import org.opencds.cqf.cds.request.Request;
 import org.opencds.cqf.cds.response.CdsCard;
 import org.opencds.cqf.common.config.HapiProperties;
 import org.opencds.cqf.common.exceptions.InvalidRequestException;
-import org.opencds.cqf.common.providers.LibraryResolutionProvider;
-import org.opencds.cqf.common.retrieve.JpaFhirRetrieveProvider;
+import ca.uhn.fhir.cql.common.retrieve.JpaFhirRetrieveProvider;
 import org.opencds.cqf.cql.engine.data.CompositeDataProvider;
 import org.opencds.cqf.cql.engine.debug.DebugMap;
 import org.opencds.cqf.cql.engine.exception.CqlException;
@@ -47,13 +46,11 @@ import org.opencds.cqf.cql.engine.execution.Context;
 import org.opencds.cqf.cql.engine.execution.LibraryLoader;
 import org.opencds.cqf.cql.engine.fhir.exception.DataProviderException;
 import org.opencds.cqf.cql.engine.fhir.model.R4FhirModelResolver;
-import org.opencds.cqf.r4.helpers.LibraryHelper;
-import org.opencds.cqf.r4.providers.JpaTerminologyProvider;
+import ca.uhn.fhir.cql.r4.helper.LibraryHelper;
+import ca.uhn.fhir.cql.r4.provider.JpaTerminologyProvider;
 import org.opencds.cqf.r4.providers.PlanDefinitionApplyProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationContext;
 
 import ca.uhn.fhir.context.FhirContext;
@@ -74,7 +71,7 @@ public class CdsHooksServlet extends HttpServlet {
 
     private JpaFhirRetrieveProvider fhirRetrieveProvider;
 
-    private org.opencds.cqf.r4.providers.JpaTerminologyProvider jpaTerminologyProvider;
+    private ca.uhn.fhir.cql.r4.provider.JpaTerminologyProvider jpaTerminologyProvider;
 
     public IValidationSupport jpaValidationSupportChain;
 

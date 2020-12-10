@@ -4,7 +4,7 @@ import java.util.UUID;
 
 import org.hl7.fhir.dstu3.model.Enumerations;
 import org.hl7.fhir.dstu3.model.StructureMap;
-import org.opencds.cqf.common.builders.BaseBuilder;
+import ca.uhn.fhir.cql.common.builder.BaseBuilder;
 
 public class StructuredMapBuilder extends BaseBuilder<StructureMap> {
 

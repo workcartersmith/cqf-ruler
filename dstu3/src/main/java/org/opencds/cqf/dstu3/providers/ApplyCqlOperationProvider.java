@@ -7,6 +7,8 @@ import java.util.List;
 
 import javax.inject.Inject;
 
+import ca.uhn.fhir.cql.common.helper.TranslatorHelper;
+import ca.uhn.fhir.cql.common.provider.EvaluationProviderFactory;
 import org.cqframework.cql.cql2elm.LibraryManager;
 import org.cqframework.cql.cql2elm.ModelManager;
 import org.cqframework.cql.elm.execution.Library;
@@ -24,8 +26,6 @@ import org.hl7.fhir.dstu3.model.Property;
 import org.hl7.fhir.dstu3.model.Resource;
 import org.hl7.fhir.dstu3.model.StringType;
 import org.hl7.fhir.exceptions.FHIRException;
-import org.opencds.cqf.common.evaluation.EvaluationProviderFactory;
-import org.opencds.cqf.common.helpers.TranslatorHelper;
 import org.opencds.cqf.cql.engine.execution.Context;
 import org.opencds.cqf.cql.engine.runtime.DateTime;
 import org.springframework.stereotype.Component;

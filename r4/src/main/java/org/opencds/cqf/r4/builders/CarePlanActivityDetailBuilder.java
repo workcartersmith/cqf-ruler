@@ -10,7 +10,7 @@ import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Reference;
 import org.hl7.fhir.r4.model.SimpleQuantity;
 import org.hl7.fhir.r4.model.Type;
-import org.opencds.cqf.common.builders.BaseBuilder;
+import ca.uhn.fhir.cql.common.builder.BaseBuilder;
 
 public class CarePlanActivityDetailBuilder extends BaseBuilder<CarePlan.CarePlanActivityDetailComponent> {
 

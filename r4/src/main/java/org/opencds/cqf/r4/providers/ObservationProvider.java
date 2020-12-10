@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 
-import static org.opencds.cqf.common.helpers.ClientHelper.getClient;
+import static ca.uhn.fhir.cql.common.helper.ClientHelper.getClient;
 
 @Component
 public class ObservationProvider {

@@ -8,7 +8,7 @@ import org.hl7.fhir.dstu3.model.CarePlan;
 import org.hl7.fhir.dstu3.model.CodeableConcept;
 import org.hl7.fhir.dstu3.model.Reference;
 import org.hl7.fhir.dstu3.model.Resource;
-import org.opencds.cqf.common.builders.BaseBuilder;
+import ca.uhn.fhir.cql.common.builder.BaseBuilder;
 
 public class CarePlanActivityBuilder extends BaseBuilder<CarePlan.CarePlanActivityComponent> {
 
