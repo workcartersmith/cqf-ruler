@@ -39,6 +39,7 @@ import org.opencds.cqf.cql.evaluator.spring.EvaluatorConfiguration;
 import org.opencds.cqf.ruler.common.dal.RulerDal;
 import org.opencds.cqf.ruler.r4.config.OperationsProviderLoader;
 import org.opencds.cqf.ruler.r4.helpers.LibraryHelper2;
+import org.opencds.cqf.ruler.r4.providers.CodeSystemUpdateProvider;
 import org.opencds.cqf.ruler.r4.providers.PlanDefinitionApplyProvider;
 import org.opencds.cqf.ruler.server.annotations.OnR4Condition;
 import org.opencds.cqf.ruler.server.cql.StarterCqlR4Config;
@@ -207,4 +208,10 @@ public class FhirServerConfigR4 extends BaseJavaConfigR4 {
     retrieveProvider.setExpandValueSets(true);
     return retrieveProvider;
   }
+
+  @Bean
+  public CodeSystemUpdateProvider codeSystemUpdateProvider(DaoRegistry daoRegistry) {
+      return new CodeSystemUpdateProvider(daoRegistry);
+  }
+
 }

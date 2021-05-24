@@ -2,6 +2,7 @@ package org.opencds.cqf.ruler.r4.config;
 
 import javax.annotation.PostConstruct;
 
+import org.opencds.cqf.ruler.r4.providers.CodeSystemUpdateProvider;
 import org.opencds.cqf.ruler.r4.providers.PlanDefinitionApplyProvider;
 import org.opencds.cqf.ruler.r4.providers.QuestionnaireProvider;
 import org.slf4j.Logger;
@@ -32,6 +33,7 @@ public class OperationsProviderLoader {
 				myLogger.info("Registering CQF-Ruler Providers");
 				myResourceProviderFactory.addSupplier(() -> new QuestionnaireProvider(myFhirContext));
 				myResourceProviderFactory.addSupplier(() -> appCtx.getBean(PlanDefinitionApplyProvider.class));
+				myResourceProviderFactory.addSupplier(() -> appCtx.getBean(CodeSystemUpdateProvider.class));
 				break;
 			default:
 				throw new ConfigurationException("CQL not supported for FHIR version " + myFhirContext.getVersion().getVersion());

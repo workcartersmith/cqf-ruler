@@ -20,6 +20,7 @@ import org.opencds.cqf.ruler.r4.builders.OperationOutcomeBuilder;
 import org.opencds.cqf.ruler.r4.builders.RandomIdBuilder;
 import org.springframework.stereotype.Component;
 
+import ca.uhn.fhir.jpa.api.dao.DaoRegistry;
 import ca.uhn.fhir.jpa.api.dao.IFhirResourceDao;
 import ca.uhn.fhir.jpa.searchparam.SearchParameterMap;
 import ca.uhn.fhir.rest.annotation.IdParam;
@@ -33,10 +34,9 @@ public class CodeSystemUpdateProvider {
     private IFhirResourceDao<CodeSystem> codeSystemDao;
 
     @Inject
-    public CodeSystemUpdateProvider(IFhirResourceDao<ValueSet> valueSetDao,
-            IFhirResourceDao<CodeSystem> codeSystemDao) {
-        this.valueSetDao = valueSetDao;
-        this.codeSystemDao = codeSystemDao;
+    public CodeSystemUpdateProvider(DaoRegistry registry) {
+        this.valueSetDao = registry.getResourceDao(ValueSet.class);
+        this.codeSystemDao = registry.getResourceDao(CodeSystem.class);
     }
 
     /***
