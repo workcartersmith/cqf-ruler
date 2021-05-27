@@ -11,6 +11,7 @@ import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 
+import org.cqframework.cql.elm.execution.VersionedIdentifier;
 import org.hl7.fhir.r4.model.CodeSystem;
 import org.hl7.fhir.r4.model.Enumerations;
 import org.hl7.fhir.r4.model.IdType;
@@ -26,6 +27,7 @@ import ca.uhn.fhir.jpa.searchparam.SearchParameterMap;
 import ca.uhn.fhir.rest.annotation.IdParam;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
+import ca.uhn.fhir.rest.param.TokenParam;
 import ca.uhn.fhir.rest.param.UriParam;
 
 @Component
@@ -92,7 +94,7 @@ public class CodeSystemUpdateProvider {
         List<String> codeSystems = new ArrayList<>();
 
         // Possible for this to run out of memory with really large ValueSets and CodeSystems.
-        Map<String, Set<String>> codesBySystem = new HashMap<>();
+        Map<VersionedIdentifier, Set<String>> codesBySystem = new HashMap<>();
         for (ValueSet vs : valueSets){
 
         if (vs.hasCompose() && vs.getCompose().hasInclude()) {
@@ -102,11 +104,13 @@ public class CodeSystemUpdateProvider {
                 }
 
                 String system = csc.getSystem();
-                if (!codesBySystem.containsKey(system)){
-                    codesBySystem.put(system, new HashSet<>());
+                String version = csc.getVersion();
+                VersionedIdentifier identifier = new VersionedIdentifier().withId(system).withVersion(version);
+                if (!codesBySystem.containsKey(identifier)){
+                    codesBySystem.put(identifier, new HashSet<>());
                 }
 
-                Set<String> codes = codesBySystem.get(system);
+                Set<String> codes = codesBySystem.get(identifier);
                 
                 codes.addAll(csc.getConcept().stream().map(ValueSet.ConceptReferenceComponent::getCode)
                 .collect(Collectors.toList()));
@@ -115,10 +119,10 @@ public class CodeSystemUpdateProvider {
 
         }
 
-        for(Map.Entry<String, Set<String>> entry : codesBySystem.entrySet()) {
-            String system = entry.getKey();
-            CodeSystem codeSystem = getCodeSystemByUrl(system);
-            updateCodeSystem(codeSystem.setUrl(system), getUnionDistinctCodes(entry.getValue(), codeSystem));
+        for(Map.Entry<VersionedIdentifier, Set<String>> entry : codesBySystem.entrySet()) {
+            VersionedIdentifier identifier = entry.getKey();
+            CodeSystem codeSystem = getCodeSystemByUrl(identifier.getId(), identifier.getVersion());
+            updateCodeSystem(codeSystem.setUrl(identifier.getId()).setVersion(identifier.getVersion()), getUnionDistinctCodes(entry.getValue(), codeSystem));
 
             codeSystems.add(codeSystem.getUrl());
 
@@ -138,18 +142,19 @@ public class CodeSystemUpdateProvider {
      * Fetch CodeSystem matching the given url search parameter
      *
      * @param url The url of the CodeSystem to fetch
+     * @param version The version of the CodeSystem to fetch.
      * @return The CodeSystem that matches the url parameter or a new CodeSystem
-     *         with the url and id populated
+     *         with the url, id, and version populated
      */
-    private CodeSystem getCodeSystemByUrl(String url) {
+    private CodeSystem getCodeSystemByUrl(String url, String version) {
         IBundleProvider bundleProvider = this.codeSystemDao
-                .search(new SearchParameterMap().add(CodeSystem.SP_URL, new UriParam(url)));
+                .search(new SearchParameterMap().add(CodeSystem.SP_URL, new UriParam(url)).add(CodeSystem.SP_VERSION, new TokenParam(version)));
 
         if (bundleProvider.size() >= 1) {
             return (CodeSystem) bundleProvider.getResources(0, 1).get(0);
         }
 
-        return (CodeSystem) new CodeSystem().setUrl(url).setId(RandomIdBuilder.build(null));
+        return (CodeSystem) new CodeSystem().setUrl(url).setVersion(version).setId(RandomIdBuilder.build(null));
     }
 
     /***
