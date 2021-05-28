@@ -6,7 +6,7 @@ import org.opencds.cqf.cql.evaluator.fhir.dal.FhirDal;
 
 import ca.uhn.fhir.jpa.api.dao.DaoRegistry;
 import ca.uhn.fhir.jpa.searchparam.SearchParameterMap;
-import ca.uhn.fhir.rest.param.TokenParam;
+import ca.uhn.fhir.rest.param.UriParam;
 
 public class RulerDal implements FhirDal {
     DaoRegistry registry;
@@ -45,6 +45,6 @@ public class RulerDal implements FhirDal {
     // TODO: update to getAllResources
     @Override
     public Iterable<IBaseResource> searchByUrl(String resourceType, String url) {
-        return registry.getResourceDao(resourceType).search(SearchParameterMap.newSynchronous().add("url", new TokenParam(url))).getAllResources();
+        return registry.getResourceDao(resourceType).search(SearchParameterMap.newSynchronous().add("url", new UriParam(url))).getAllResources();
     }
 }
