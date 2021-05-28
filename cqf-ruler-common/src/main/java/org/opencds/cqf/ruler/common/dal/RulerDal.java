@@ -39,12 +39,12 @@ public class RulerDal implements FhirDal {
     // TODO: update to getAllResources
     @Override
     public Iterable<IBaseResource> search(String resourceType) {
-        return registry.getResourceDao(resourceType).search(SearchParameterMap.newSynchronous()).getResources(0, 10000);
+        return registry.getResourceDao(resourceType).search(SearchParameterMap.newSynchronous()).getAllResources();
     }
 
     // TODO: update to getAllResources
     @Override
     public Iterable<IBaseResource> searchByUrl(String resourceType, String url) {
-        return registry.getResourceDao(resourceType).search(SearchParameterMap.newSynchronous().add("url", new TokenParam(url))).getResources(0, 10000);
+        return registry.getResourceDao(resourceType).search(SearchParameterMap.newSynchronous().add("url", new TokenParam(url))).getAllResources();
     }
 }
