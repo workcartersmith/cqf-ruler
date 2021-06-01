@@ -222,31 +222,47 @@ public class MeasureOperationsProvider {
     // }
 
     @Operation(name = "$care-gaps", idempotent = true, type = Measure.class)
-    public Parameters careGapsReport(@OperationParam(name = "periodStart") String periodStart,
-            @OperationParam(name = "periodEnd") String periodEnd, @OperationParam(name = "subject") String subject,
-            @OperationParam(name = "topic") String topic, @OperationParam(name = "practitioner") String practitioner,
-            @OperationParam(name = "measureId") List<String> measureId, @OperationParam(name = "measureIdentifier") List<String> measureIdentifier,
-            @OperationParam(name = "measureUrl") List<CanonicalType> measureUrl, @OperationParam(name="status")List<String> status,
-            @OperationParam(name = "organization") String organization,  @OperationParam(name = "program") String program){
-        //TODO: topic should allow many and be a union of them
-        //TODO: "The Server needs to make sure that practitioner is authorized to get the gaps in care report for and know what measures the practitioner are eligible or qualified."
+    public Parameters careGapsReport(
+            @OperationParam(name = "periodStart")       String              periodStart,
+            @OperationParam(name = "periodEnd")         String              periodEnd,
+            @OperationParam(name = "subject")           String              subject,
+            @OperationParam(name = "topic")             String              topic, 
+            @OperationParam(name = "practitioner")      String              practitioner,
+            @OperationParam(name = "measureId")         List<String>        measureId,
+            @OperationParam(name = "measureIdentifier") List<String>        measureIdentifier,
+            @OperationParam(name = "measureUrl")        List<CanonicalType> measureUrl,
+            @OperationParam(name=  "status")            List<String>        status,
+            @OperationParam(name = "organization")      String              organization,
+            @OperationParam(name = "program")           String              program)
+        {
+
+        // TODO: topic should allow many and be a union of them
+        // TODO: "The Server needs to make sure that practitioner is authorized to get the gaps in care report for and know what measures the practitioner are eligible or qualified."
         Parameters returnParams = new Parameters();
         
-        if (careGapParameterValidation(periodStart, periodEnd, subject, topic, practitioner, measureId, measureIdentifier, measureUrl, status, organization, program)) {
-            List<Measure> measures = resolveMeasures(measureId, measureIdentifier, measureUrl);
-            if (subject.startsWith("Patient/")){
-                resolvePatientGapBundleForMeasures(periodStart, periodEnd, subject, topic, status, returnParams, measures, "return", organization);
-            } else if (subject.startsWith("Group/")) {
-                returnParams.setId((status==null?"all-gaps": status) + "-" + subject.replace("/","_") + "-report");
-                (getPatientListFromGroup(subject))
-                    .forEach(groupSubject -> resolvePatientGapBundleForMeasures(periodStart, periodEnd, subject, topic, status, returnParams, measures, "return", organization));
+        if ( careGapParameterValidation( periodStart, periodEnd, subject, topic, practitioner, measureId, measureIdentifier, measureUrl, status, organization, program ) )
+        {
+            List<Measure> measures = resolveMeasures( measureId, measureIdentifier, measureUrl );
+            if ( subject.startsWith( "Patient/" ) )
+            {
+                resolvePatientGapBundleForMeasures( periodStart, periodEnd, subject, topic, status, returnParams, measures, "return", organization );
             }
-            else if (Strings.isNullOrEmpty(practitioner)) {
+            else if ( subject.startsWith( "Group/" ) )
+            {
+                returnParams.setId( ( status==null?"all-gaps": status ) + "-" + subject.replace( "/","_" ) + "-report" );
+
+                ( getPatientListFromGroup( subject ) )
+                    .forEach( groupSubject -> resolvePatientGapBundleForMeasures( periodStart, periodEnd, subject, topic, status, returnParams, measures, "return", organization ) );
+            }
+            else if ( Strings.isNullOrEmpty( practitioner ) )
+            {
                 String parameterName = "Gaps in Care Report - " + subject;
-                resolvePatientGapBundleForMeasures(periodStart, periodEnd, subject, topic, status, returnParams, measures, parameterName, organization);
+                resolvePatientGapBundleForMeasures( periodStart, periodEnd, subject, topic, status, returnParams, measures, parameterName, organization );
             }
+
             return returnParams;
         }
+
         return returnParams;  
     }
 
