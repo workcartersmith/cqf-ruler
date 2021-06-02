@@ -33,6 +33,7 @@ import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
 import ca.uhn.fhir.jpa.api.dao.DaoRegistry;
 import ca.uhn.fhir.jpa.rp.r4.MeasureResourceProvider;
 import ca.uhn.fhir.jpa.searchparam.SearchParameterMap;
+import ca.uhn.fhir.model.api.annotation.SimpleSetter.Parameter;
 import ca.uhn.fhir.rest.api.MethodOutcome;
 import ca.uhn.fhir.rest.api.RestOperationTypeEnum;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
@@ -223,8 +224,8 @@ public class MeasureOperationsProvider {
 
     @Operation(name = "$care-gaps", idempotent = true, type = Measure.class)
     public Parameters careGapsReport(
-            @OperationParam(name = "periodStart")       String              periodStart,
-            @OperationParam(name = "periodEnd")         String              periodEnd,
+            @OperationParam(name = "periodStart")       List<String>        periodStart,
+            @OperationParam(name = "periodEnd")         List<String>        periodEnd,
             @OperationParam(name = "subject")           String              subject,
             @OperationParam(name = "topic")             String              topic, 
             @OperationParam(name = "practitioner")      String              practitioner,
@@ -234,30 +235,60 @@ public class MeasureOperationsProvider {
             @OperationParam(name=  "status")            List<String>        status,
             @OperationParam(name = "organization")      String              organization,
             @OperationParam(name = "program")           String              program)
-        {
-
+    {
         // TODO: topic should allow many and be a union of them
         // TODO: "The Server needs to make sure that practitioner is authorized to get the gaps in care report for and know what measures the practitioner are eligible or qualified."
         Parameters returnParams = new Parameters();
+
+        // Setting periodStart and periodEnd to lists to check if multiple have been supplied.
+        // This is a hack and I hate it. I don't know how to just pull the current url due to
+        // the amount of abstraction going on. I didn't want to waste too much time here.
+        // If there's a better way of doing this, please ping me. - Carter
+        String _periodStart     = periodStart.get( 0 );
+        String _periodEnd       = periodEnd.get( 0 );
+
+        if ( periodStart.size() > 1 )
+            throw new IllegalArgumentException( "Only one periodStart argument can be supplied." );
         
-        if ( careGapParameterValidation( periodStart, periodEnd, subject, topic, practitioner, measureId, measureIdentifier, measureUrl, status, organization, program ) )
+        if ( periodEnd.size() > 1 )
+            throw new IllegalArgumentException( "Only one periodEnd argument can be supplied." );
+
+        for ( String s : status )
+        {
+            System.out.println( "===========================================================================");
+            System.out.println( s );
+            System.out.println( "===========================================================================");
+        }
+
+        if ( careGapParameterValidation( _periodStart, _periodEnd, subject, topic, practitioner, measureId, measureIdentifier, measureUrl, status, organization, program ) )
         {
             List<Measure> measures = resolveMeasures( measureId, measureIdentifier, measureUrl );
             if ( subject.startsWith( "Patient/" ) )
             {
-                resolvePatientGapBundleForMeasures( periodStart, periodEnd, subject, topic, status, returnParams, measures, "return", organization );
+                resolvePatientGapBundleForMeasures( _periodStart, _periodEnd, subject, topic, status, returnParams, measures, "return", organization );
             }
             else if ( subject.startsWith( "Group/" ) )
             {
                 returnParams.setId( ( status==null?"all-gaps": status ) + "-" + subject.replace( "/","_" ) + "-report" );
 
                 ( getPatientListFromGroup( subject ) )
-                    .forEach( groupSubject -> resolvePatientGapBundleForMeasures( periodStart, periodEnd, subject, topic, status, returnParams, measures, "return", organization ) );
+                    .forEach( groupSubject -> resolvePatientGapBundleForMeasures(
+                                _periodStart,
+                                _periodEnd,
+                                subject,
+                                topic,
+                                status,
+                                returnParams,
+                                measures,
+                                "return",
+                                organization
+                            ));
+
             }
             else if ( Strings.isNullOrEmpty( practitioner ) )
             {
                 String parameterName = "Gaps in Care Report - " + subject;
-                resolvePatientGapBundleForMeasures( periodStart, periodEnd, subject, topic, status, returnParams, measures, parameterName, organization );
+                resolvePatientGapBundleForMeasures( _periodStart, _periodEnd, subject, topic, status, returnParams, measures, parameterName, organization );
             }
 
             return returnParams;
@@ -266,24 +297,43 @@ public class MeasureOperationsProvider {
         return returnParams;  
     }
 
-    private Boolean careGapParameterValidation(String periodStart, String periodEnd, String subject, String topic,
-            String practitioner, List<String> measureId, List<String> measureIdentifier, List<CanonicalType> measureUrl, List<String> status, String organization, String program) {
-        if(Strings.isNullOrEmpty(periodStart) || Strings.isNullOrEmpty(periodEnd)) {
-            throw new IllegalArgumentException("periodStart and periodEnd are required.");
+    private Boolean careGapParameterValidation(
+            String periodStart, 
+            String periodEnd,
+            String subject,
+            String topic,
+            String practitioner,
+            List<String> measureId,
+            List<String> measureIdentifier, 
+            List<CanonicalType> measureUrl,
+            List<String> status,
+            String organization,
+            String program)
+    {
+        if( Strings.isNullOrEmpty( periodStart ) || Strings.isNullOrEmpty( periodEnd ) )
+        {
+            throw new IllegalArgumentException( "periodStart and periodEnd are required." );
         }
+
         //TODO - remove this - covered in check of subject/practitioner/organization - left in for now 'cause we need a subject to develop
-        if (Strings.isNullOrEmpty(subject)) {
+        if ( Strings.isNullOrEmpty( subject ) )
+        {
             throw new IllegalArgumentException("Subject is required.");
         }
-        if (!Strings.isNullOrEmpty(organization)) {
+
+        if ( !Strings.isNullOrEmpty( organization ) )
+        {
             // //TODO - add this - left out for now 'cause we need a subject to develop
             // if (!Strings.isNullOrEmpty(subject)) {
             //     throw new IllegalArgumentException("If a organization is specified then only organization or practitioner may be specified.");
             // }
         }
-        if(!Strings.isNullOrEmpty(practitioner) && Strings.isNullOrEmpty(organization)){
-            throw new IllegalArgumentException("If a practitioner is specified then an organization must also be specified.");
+
+        if( !Strings.isNullOrEmpty( practitioner ) && Strings.isNullOrEmpty( organization ) )
+        {
+            throw new IllegalArgumentException( "If a practitioner is specified then an organization must also be specified." );
         }
+
         if (!Strings.isNullOrEmpty(practitioner) && Strings.isNullOrEmpty(organization)) {
             // //TODO - add this - left out for now 'cause we need a subject to develop
             // if (!Strings.isNullOrEmpty(subject)) {
