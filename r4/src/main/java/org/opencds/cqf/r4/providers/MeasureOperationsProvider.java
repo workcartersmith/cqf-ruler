@@ -16,6 +16,8 @@ import org.hl7.fhir.instance.model.api.IAnyResource;
 import org.hl7.fhir.instance.model.api.IBase;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.*;
+import org.hl7.fhir.r4.model.MeasureReport.MeasureReportGroupComponent;
+import org.hl7.fhir.r4.model.MeasureReport.MeasureReportGroupPopulationComponent;
 import org.hl7.fhir.utilities.xhtml.XhtmlNode;
 import org.opencds.cqf.common.evaluation.EvaluationProviderFactory;
 import org.opencds.cqf.common.providers.LibraryResolutionProvider;
@@ -578,7 +580,30 @@ public class MeasureOperationsProvider {
 
                 section.addEntry(
                      new Reference("DetectedIssue/" + detectedIssue.getIdElement().getIdPart()));
-                detectedIssues.add(detectedIssue);
+                
+                
+                // Set up the list and iterator bois we'll be using.
+                List<MeasureReportGroupComponent> curGroups = report.getGroup();
+                Iterator<MeasureReportGroupPopulationComponent> turboIterator;
+
+                for (MeasureReportGroupComponent g : curGroups )
+                {
+                    if ( !g.hasPopulation() )
+                        continue;
+
+                    turboIterator = g.getPopulation().iterator();
+
+                    // Iterate over the current MRGC 
+                    while ( turboIterator.hasNext() )
+                    {
+                        // If the count is > 0, we break and continue program flow without adding the detectedIssue.
+                        if ( turboIterator.next().getCount() > 0 )
+                            break;
+                    }
+
+                    detectedIssues.add( detectedIssue );
+                }
+
                 composition.addSection(section);
                 reports.add(report);
 
@@ -626,6 +651,7 @@ public class MeasureOperationsProvider {
                                 newEvaluatedResourceItem.setExtension(evalResourceExt);
                                 evaluatedResource.add(newEvaluatedResourceItem);
                             });
+
                             report.setEvaluatedResource(evaluatedResource);
                         }
                     }
