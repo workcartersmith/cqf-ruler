@@ -567,19 +567,7 @@ public class MeasureOperationsProvider {
                             .setDiv(new XhtmlNode().setValue("<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>No detected issues.</p></div>")));
                 }
 
-                detectedIssue.setId(UUID.randomUUID().toString());
-                detectedIssue.setStatus(DetectedIssue.DetectedIssueStatus.FINAL);
-                detectedIssue.setPatient(new Reference(subject.startsWith("Patient/") ? subject : "Patient/" + subject));
-                detectedIssue.getEvidence().add(new DetectedIssue.DetectedIssueEvidenceComponent().addDetail(new Reference("MeasureReport/" + report.getId())));
-                CodeableConcept code = new CodeableConcept()
-                    .addCoding(new Coding()
-                    .setSystem("http://terminology.hl7.org/CodeSystem/v3-ActCode")
-                    .setCode("CAREGAP")
-                    .setDisplay("Care Gaps"));
-                detectedIssue.setCode(code);
-
-                section.addEntry(
-                     new Reference("DetectedIssue/" + detectedIssue.getIdElement().getIdPart()));
+;
                 
                 
                 // Set up the list and iterator bois we'll be using.
@@ -596,26 +584,40 @@ public class MeasureOperationsProvider {
                     // Iterate over the current MRGC 
                     while ( turboIterator.hasNext() )
                     {
-                        // If the count is > 0, we break and continue program flow without adding the detectedIssue.
-                        if ( turboIterator.next().getCount() > 0 )
+                        // If the count is == 0, we break and continue program flow without adding the detectedIssue.
+                        if ( turboIterator.next().getCount() == 0 )
                             break;
                     }
 
                     detectedIssues.add( detectedIssue );
-                }
+                    detectedIssue.setId(UUID.randomUUID().toString());
+                    detectedIssue.setStatus(DetectedIssue.DetectedIssueStatus.FINAL);
+                    detectedIssue.setPatient(new Reference(subject.startsWith("Patient/") ? subject : "Patient/" + subject));
+                    detectedIssue.getEvidence().add(new DetectedIssue.DetectedIssueEvidenceComponent().addDetail(new Reference("MeasureReport/" + report.getId())));
+                    CodeableConcept code = new CodeableConcept()
+                        .addCoding(new Coding()
+                        .setSystem("http://terminology.hl7.org/CodeSystem/v3-ActCode")
+                        .setCode("CAREGAP")
+                        .setDisplay("Care Gaps"));
+                    detectedIssue.setCode(code);
 
-                composition.addSection(section);
-                reports.add(report);
+                    section.addEntry(
+                        new Reference("DetectedIssue/" + detectedIssue.getIdElement().getIdPart()));
+                    }
+
+                    composition.addSection(section);
+                    reports.add(report);
 
                 // TODO - add other types of improvement notation cases
             }
         }
-        if (reports.isEmpty()) {
+
+        if ( reports.isEmpty() )
             return null;
-        }
+
         Parameters parameters = new Parameters();
-        
         careGapReport.addEntry(new Bundle.BundleEntryComponent().setResource(composition));
+
         for ( MeasureReport rep : reports )
         {
             careGapReport.addEntry( new Bundle.BundleEntryComponent().setResource(rep ) );
