@@ -226,7 +226,7 @@ public class MeasureOperationsProvider {
     public Parameters careGapsReport(
             @OperationParam(name = "periodStart")       List<String>        periodStart,
             @OperationParam(name = "periodEnd")         List<String>        periodEnd,
-            @OperationParam(name = "subject")           String              subject,
+            @OperationParam(name = "subject")           List<String>        subject,
             @OperationParam(name = "topic")             String              topic, 
             @OperationParam(name = "practitioner")      String              practitioner,
             @OperationParam(name = "measureId")         List<String>        measureId,
@@ -240,55 +240,54 @@ public class MeasureOperationsProvider {
         // TODO: "The Server needs to make sure that practitioner is authorized to get the gaps in care report for and know what measures the practitioner are eligible or qualified."
         Parameters returnParams = new Parameters();
 
-        // Setting periodStart and periodEnd to lists to check if multiple have been supplied.
+        // Setting periodStart, periodEnd, and subject to lists to check if multiple have been supplied.
         // This is a hack and I hate it. I don't know how to just pull the current url due to
         // the amount of abstraction going on. I didn't want to waste too much time here.
         // If there's a better way of doing this, please ping me. - Carter
         String _periodStart     = periodStart.get( 0 );
-        String _periodEnd       = periodEnd.get( 0 );
+        String _periodEnd       =   periodEnd.get( 0 );
+        String _subject         =     subject.get( 0 );
 
         if ( periodStart.size() > 1 )
             throw new IllegalArgumentException( "Only one periodStart argument can be supplied." );
         
         if ( periodEnd.size() > 1 )
             throw new IllegalArgumentException( "Only one periodEnd argument can be supplied." );
+        
+        if ( subject.size() > 1 )
+            throw new IllegalArgumentException( "Only one subject argument can be supplied." );
 
-        for ( String s : status )
-        {
-            System.out.println( "===========================================================================");
-            System.out.println( s );
-            System.out.println( "===========================================================================");
-        }
 
-        if ( careGapParameterValidation( _periodStart, _periodEnd, subject, topic, practitioner, measureId, measureIdentifier, measureUrl, status, organization, program ) )
+        if ( careGapParameterValidation( _periodStart, _periodEnd, _subject, topic, practitioner, measureId, measureIdentifier, measureUrl, status, organization, program ) )
         {
             List<Measure> measures = resolveMeasures( measureId, measureIdentifier, measureUrl );
-            if ( subject.startsWith( "Patient/" ) )
+            if ( _subject.startsWith( "Patient/" ) )
             {
-                resolvePatientGapBundleForMeasures( _periodStart, _periodEnd, subject, topic, status, returnParams, measures, "return", organization );
+                resolvePatientGapBundleForMeasures( _periodStart, _periodEnd, _subject, topic, status, returnParams, measures, "return", organization );
             }
-            else if ( subject.startsWith( "Group/" ) )
+            else if ( _subject.startsWith( "Group/" ) )
             {
-                returnParams.setId( ( status==null?"all-gaps": status ) + "-" + subject.replace( "/","_" ) + "-report" );
+                returnParams.setId( ( status==null?"all-gaps": status ) + "-" + _subject.replace( "/","_" ) + "-report" );
 
-                ( getPatientListFromGroup( subject ) )
-                    .forEach( groupSubject -> resolvePatientGapBundleForMeasures(
-                                _periodStart,
-                                _periodEnd,
-                                subject,
-                                topic,
-                                status,
-                                returnParams,
-                                measures,
-                                "return",
-                                organization
-                            ));
+                // I don't know how to format this
+                ( getPatientListFromGroup( _subject ) )
+                    .forEach(
+                        groupSubject -> resolvePatientGapBundleForMeasures( _periodStart,
+                                                                            _periodEnd,
+                                                                            _subject,
+                                                                            topic,
+                                                                            status,
+                                                                            returnParams,
+                                                                            measures,
+                                                                            "return",
+                                                                            organization
+                                                                        ));
 
             }
             else if ( Strings.isNullOrEmpty( practitioner ) )
             {
                 String parameterName = "Gaps in Care Report - " + subject;
-                resolvePatientGapBundleForMeasures( _periodStart, _periodEnd, subject, topic, status, returnParams, measures, parameterName, organization );
+                resolvePatientGapBundleForMeasures( _periodStart, _periodEnd, _subject, topic, status, returnParams, measures, parameterName, organization );
             }
 
             return returnParams;
@@ -415,16 +414,28 @@ public class MeasureOperationsProvider {
         return measure;
     }
 
-    private void resolvePatientGapBundleForMeasures(String periodStart, String periodEnd, String subject, String topic, List<String> status,
-            Parameters returnParams, List<Measure> measures, String name, String organization) {
-        Bundle patientGapBundle = patientCareGap(periodStart, periodEnd, subject, topic, measures, status, organization);
-        if (patientGapBundle != null) {
+    private void resolvePatientGapBundleForMeasures(
+            String periodStart, 
+            String periodEnd,
+            String subject,
+            String topic,
+            List<String> status,
+            Parameters returnParams,
+            List<Measure> measures,
+            String name,
+            String organization)
+    {
+        Bundle patientGapBundle = patientCareGap( periodStart, periodEnd, subject, topic, measures, status, organization );
+
+        if ( patientGapBundle != null )
+        {
             Parameters.ParametersParameterComponent newParameter = new Parameters.ParametersParameterComponent()
-                    .setName(name)
-                    .setResource(patientGapBundle);
+                    .setName( name )
+                    .setResource( patientGapBundle );
+
             //TODO - is this supposed to be something like "id": "multiple-gaps-indv-report01"??
-            newParameter.setId(UUID.randomUUID().toString());
-            returnParams.addParameter(newParameter);
+            newParameter.setId( UUID.randomUUID().toString() );
+            returnParams.addParameter( newParameter );
         }
     }
 
@@ -439,12 +450,21 @@ public class MeasureOperationsProvider {
         return patientList;
     }
 
-    private Bundle patientCareGap(String periodStart, String periodEnd, String subject, String topic, List<Measure> measures, List<String> status, String organization) {
+    private Bundle patientCareGap(
+        String periodStart,
+        String periodEnd,
+        String subject,
+        String topic,
+        List<Measure> measures, 
+        List<String> status,
+        String organization)
+    {
         //TODO: this is an org hack.  Need to figure out what the right thing is.
         IFhirResourceDao<Organization> orgDao = this.registry.getResourceDao(Organization.class);
         List<IBaseResource> org = orgDao.search(new SearchParameterMap()).getResources(0, 1);
 
         SearchParameterMap theParams = new SearchParameterMap();
+        System.out.println( "====================================================================================================");
 
         // if (theId != null) {
         //     var measureParam = new StringParam(theId.getIdPart());
@@ -482,6 +502,7 @@ public class MeasureOperationsProvider {
 
         List<MeasureReport> reports = new ArrayList<>();
         List<DetectedIssue> detectedIssues = new ArrayList<DetectedIssue>();
+        System.out.println( "====================================================================================================");
         MeasureReport report = null;
 
         for (Measure measure : measures) {
@@ -570,21 +591,38 @@ public class MeasureOperationsProvider {
         Parameters parameters = new Parameters();
         
         careGapReport.addEntry(new Bundle.BundleEntryComponent().setResource(composition));
-        for (MeasureReport rep : reports) {
-            careGapReport.addEntry(new Bundle.BundleEntryComponent().setResource(rep));
-            if (report.hasContained()) {
-                for (Resource contained : report.getContained()) {
-                    if (contained instanceof Bundle) {
-                        addEvaluatedResourcesToParameters((Bundle) contained, parameters);
-                        if(null != parameters && !parameters.isEmpty()) {
+        for ( MeasureReport rep : reports )
+        {
+            careGapReport.addEntry( new Bundle.BundleEntryComponent().setResource(rep ) );
+            if ( report.hasContained() )
+            {
+                for ( Resource contained : report.getContained() )
+                {
+                    if ( contained instanceof Bundle )
+                    {
+                        addEvaluatedResourcesToParameters( (Bundle) contained, parameters );
+                        if ( null != parameters && !parameters.isEmpty() )
+                        {
                             List <Reference> evaluatedResource = new ArrayList<>();
+
                             parameters.getParameter().forEach(parameter -> {
                                 Reference newEvaluatedResourceItem = new Reference();
-                                newEvaluatedResourceItem.setReference(parameter.getResource().getId());
+                                newEvaluatedResourceItem.setReference(parameter.getResource().getId() );
                                 List<Extension> evalResourceExt = new ArrayList<>();
-                                evalResourceExt.add(new Extension("http://hl7.org/fhir/us/davinci-deqm/StructureDefinition/extension-populationReference",
+
+                                evalResourceExt.add(
+                                        new Extension("http://hl7.org/fhir/us/davinci-deqm/StructureDefinition/extension-populationReference",
                                         new CodeableConcept()
-                                                .addCoding(new Coding("http://teminology.hl7.org/CodeSystem/measure-population", "initial-population", "initial-population"))));
+                                                .addCoding(
+                                                    new Coding(
+                                                        "http://teminology.hl7.org/CodeSystem/measure-population",
+                                                        "initial-population",
+                                                        "initial-population"
+                                                    )
+                                                )
+                                            )
+                                        );
+
                                 newEvaluatedResourceItem.setExtension(evalResourceExt);
                                 evaluatedResource.add(newEvaluatedResourceItem);
                             });
@@ -594,8 +632,9 @@ public class MeasureOperationsProvider {
                 }
             }
         }
-        for (DetectedIssue detectedIssue : detectedIssues) {
-            careGapReport.addEntry(new Bundle.BundleEntryComponent().setResource(detectedIssue));
+
+        for ( DetectedIssue detectedIssue : detectedIssues ) {
+            careGapReport.addEntry(new Bundle.BundleEntryComponent().setResource(detectedIssue) );
         }
  
         return careGapReport;
