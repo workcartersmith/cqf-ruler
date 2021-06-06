@@ -256,9 +256,8 @@ public class MeasureOperationsProvider {
         if ( periodEnd.size() > 1 )
             throw new IllegalArgumentException( "Only one periodEnd argument can be supplied." );
         
-        if ( subject.size() > 1 )
-            throw new IllegalArgumentException( "Only one subject argument can be supplied." );
-
+        if ( subject.size() > 1 || subject.size() <= 0 )
+            throw new IllegalArgumentException( "You must supply subject argument." );
 
         if ( careGapParameterValidation( _periodStart, _periodEnd, _subject, topic, practitioner, measureId, measureIdentifier, measureUrl, status, organization, program ) )
         {
