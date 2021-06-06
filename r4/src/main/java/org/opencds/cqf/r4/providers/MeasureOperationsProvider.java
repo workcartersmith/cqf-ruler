@@ -460,45 +460,47 @@ public class MeasureOperationsProvider {
         List<String> status,
         String organization)
     {
+        System.out.println( "Hello from the other side" );
         //TODO: this is an org hack.  Need to figure out what the right thing is.
-        IFhirResourceDao<Organization> orgDao = this.registry.getResourceDao(Organization.class);
-        List<IBaseResource> org = orgDao.search(new SearchParameterMap()).getResources(0, 1);
+        IFhirResourceDao<Organization> orgDao = this.registry.getResourceDao( Organization.class );
+        List<IBaseResource> org = orgDao.search( new SearchParameterMap() ).getResources( 0, 1 );
 
         SearchParameterMap theParams = new SearchParameterMap();
-        System.out.println( "====================================================================================================");
 
         // if (theId != null) {
         //     var measureParam = new StringParam(theId.getIdPart());
         //     theParams.add("_id", measureParam);
         // }
 
-        if (topic != null && !topic.equals("")) {
-            TokenParam topicParam = new TokenParam(topic);
-            theParams.add("topic", topicParam);
+        if ( topic != null && !topic.equals( "" ) )
+        {
+            TokenParam topicParam = new TokenParam( topic );
+            theParams.add( "topic", topicParam );
         }
 
         Bundle careGapReport = new Bundle();
-        careGapReport.setMeta(new Meta().addProfile("http://hl7.org/fhir/us/davinci-deqm/StructureDefinition/gaps-bundle-deqm"));
-        careGapReport.setType(Bundle.BundleType.DOCUMENT);
-        careGapReport.setTimestamp(new Date());
-        careGapReport.setId(UUID.randomUUID().toString());
+        careGapReport.setMeta( new Meta().addProfile( "http://hl7.org/fhir/us/davinci-deqm/StructureDefinition/gaps-bundle-deqm" ) );
+        careGapReport.setType( Bundle.BundleType.DOCUMENT );
+        careGapReport.setTimestamp( new Date() );
+        careGapReport.setId( UUID.randomUUID().toString() );
         //TODO - this MIGHT be a specific string
-        careGapReport.setIdentifier(new Identifier().setSystem("urn:ietf:rfc:3986").setValue("urn:uuid:" + UUID.randomUUID().toString()));
+        careGapReport.setIdentifier( new Identifier().setSystem( "urn:ietf:rfc:3986" ).setValue( "urn:uuid:" + UUID.randomUUID().toString() ) );
 
         Composition composition = new Composition();
-        composition.setMeta(new Meta().addProfile("http://hl7.org/fhir/us/davinci-deqm/StructureDefinition/gaps-composition-deqm"));
-        composition.setStatus(Composition.CompositionStatus.FINAL)
-                .setSubject(new Reference(subject.startsWith("Patient/") ? subject : "Patient/" + subject))
-                .setTitle("Care Gap Report for " + subject)
-                .setDate(new Date())
-                .setType(new CodeableConcept()
-                        .addCoding(new Coding()
-                                .setCode("96315-7")
-                                .setSystem("http://loinc.org")
-                                .setDisplay("Gaps in Care Report")));
+        composition.setMeta(new Meta().addProfile( "http://hl7.org/fhir/us/davinci-deqm/StructureDefinition/gaps-composition-deqm" ) );
+        composition.setStatus( Composition.CompositionStatus.FINAL )
+                .setSubject( new Reference( subject.startsWith( "Patient/" ) ? subject : "Patient/" + subject) )
+                .setTitle( "Care Gap Report for " + subject )
+                .setDate( new Date() )
+                .setType( new CodeableConcept()
+                        .addCoding( new Coding()
+                                .setCode( "96315-7")
+                                .setSystem( "http://loinc.org")
+                                .setDisplay( "Gaps in Care Report") ) );
 
-        if (organization != null) {
-            composition.setCustodian(new Reference(organization.startsWith("Organization/") ? organization : "Organization/" + organization));
+        if ( organization != null )
+        {
+            composition.setCustodian( new Reference(organization.startsWith( "Organization/" ) ? organization : "Organization/" + organization ) );
         }
 
         List<MeasureReport> reports = new ArrayList<>();
@@ -506,12 +508,13 @@ public class MeasureOperationsProvider {
         System.out.println( "====================================================================================================");
         MeasureReport report = null;
 
-        for (Measure measure : measures) {
-
+        for ( Measure measure : measures )
+        {
             Composition.SectionComponent section = new Composition.SectionComponent();
 
-            if (measure.hasTitle()) {
-                section.setTitle(measure.getTitle());
+            if ( measure.hasTitle() )
+            {
+                section.setTitle( measure.getTitle() );
             }
 
             // TODO - this is configured for patient-level evaluation only
@@ -615,7 +618,7 @@ public class MeasureOperationsProvider {
             return null;
 
         Parameters parameters = new Parameters();
-        careGapReport.addEntry(new Bundle.BundleEntryComponent().setResource(composition));
+        careGapReport.addEntry( new Bundle.BundleEntryComponent().setResource( composition ) );
 
         for ( MeasureReport rep : reports )
         {
@@ -670,22 +673,35 @@ public class MeasureOperationsProvider {
     private double resolveProportion(MeasureReport report, Measure measure) {
         int numerator = 0;
         int denominator = 0;
-        for (MeasureReport.MeasureReportGroupComponent group : report.getGroup()) {
-            if (group.hasPopulation()) {
-                for (MeasureReport.MeasureReportGroupPopulationComponent population : group.getPopulation()) {
-                    // TODO - currently configured for measures with only 1 numerator and 1
-                    // denominator
-                    if (population.hasCode()) {
-                        if (population.getCode().hasCoding()) {
-                            for (Coding coding : population.getCode().getCoding()) {
-                                if (coding.hasCode()) {
-                                    if (coding.getCode().equals("numerator") && population.hasCount()) {
-                                        numerator = population.getCount();
-                                    } else if (coding.getCode().equals("denominator")
-                                            && population.hasCount()) {
-                                        denominator = population.getCount();
-                                    }
-                                }
+        for ( MeasureReport.MeasureReportGroupComponent group : report.getGroup() )
+        {
+            if ( !group.hasPopulation() )
+            {
+                continue;
+            }
+
+            for ( MeasureReport.MeasureReportGroupPopulationComponent population : group.getPopulation() )
+            {
+                // TODO - currently configured for measures with only 1 numerator and 1
+                // denominator
+                if ( !population.hasCode() )
+                {
+                    continue;
+                }
+
+                if ( population.getCode().hasCoding() )
+                {
+                    for ( Coding coding : population.getCode().getCoding() )
+                    {
+                        if ( coding.hasCode() && population.hasCount() )
+                        {
+                            if ( coding.getCode().equals( "numerator" ) ) 
+                            {
+                                numerator = population.getCount();
+                            } 
+                            else if ( coding.getCode().equals( "denominator" ) )
+                            {
+                                denominator = population.getCount();
                             }
                         }
                     }
