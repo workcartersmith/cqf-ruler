@@ -144,39 +144,52 @@ public class MeasureOperationsProvider {
      *
      */
     @Operation(name = "$evaluate-measure", idempotent = true, type = Measure.class)
-    public MeasureReport evaluateMeasure(@IdParam IdType theId,
-            @OperationParam(name = "periodStart") String periodStart,
-            @OperationParam(name = "periodEnd") String periodEnd, @OperationParam(name = "measure") String measureRef,
-            @OperationParam(name = "reportType") String reportType, @OperationParam(name = "patient") String patientRef,
-            @OperationParam(name = "productLine") String productLine,
-            @OperationParam(name = "practitioner") String practitionerRef,
+    public MeasureReport evaluateMeasure(
+            @IdParam IdType theId,
+            @OperationParam(name = "periodStart")    String periodStart,
+            @OperationParam(name = "periodEnd")      String periodEnd,
+            @OperationParam(name = "measure")        String measureRef,
+            @OperationParam(name = "reportType")     String reportType,
+            @OperationParam(name = "patient")        String patientRef,
+            @OperationParam(name = "productLine")    String productLine,
+            @OperationParam(name = "practitioner")   String practitionerRef,
             @OperationParam(name = "lastReceivedOn") String lastReceivedOn,
-            @OperationParam(name = "source") String source, @OperationParam(name = "user") String user,
-            @OperationParam(name = "pass") String pass) throws InternalErrorException, FHIRException {
-        LibraryLoader libraryLoader = LibraryHelper.createLibraryLoader(this.libraryResolutionProvider);
-        MeasureEvaluationSeed seed = new MeasureEvaluationSeed(this.factory, libraryLoader,
-                this.libraryResolutionProvider);
-        Measure measure = this.measureResourceProvider.getDao().read(theId);
+            @OperationParam(name = "source")         String source,
+            @OperationParam(name = "user")           String user,
+            @OperationParam(name = "pass")           String pass) throws InternalErrorException, FHIRException
+    {
+        LibraryLoader libraryLoader = LibraryHelper.createLibraryLoader( this.libraryResolutionProvider );
+        MeasureEvaluationSeed seed = new MeasureEvaluationSeed(
+            this.factory,
+            libraryLoader,
+            this.libraryResolutionProvider );
+        Measure measure = this.measureResourceProvider.getDao().read( theId );
 
-        if (measure == null) {
-            throw new RuntimeException("Could not find Measure/" + theId.getIdPart());
+        if ( measure == null )
+        {
+            throw new RuntimeException( "Could not find Measure/" + theId.getIdPart() );
         }
 
-        seed.setup(measure, periodStart, periodEnd, productLine, source, user, pass);
+        seed.setup( measure, periodStart, periodEnd, productLine, source, user, pass );
 
         // resolve report type
-        MeasureEvaluation evaluator = new MeasureEvaluation(seed.getDataProvider(), this.registry,
-                seed.getMeasurementPeriod());
-        if (reportType != null) {
-            switch (reportType) {
+        MeasureEvaluation evaluator = new MeasureEvaluation(
+                seed.getDataProvider(),
+                this.registry,
+                seed.getMeasurementPeriod() );
+
+        if ( reportType != null )
+        {
+            switch ( reportType )
+            {
                 case "patient":
-                    return evaluator.evaluatePatientMeasure(seed.getMeasure(), seed.getContext(), patientRef);
+                    return evaluator.evaluatePatientMeasure( seed.getMeasure(), seed.getContext(), patientRef );
                 case "patient-list":
-                    return evaluator.evaluateSubjectListMeasure(seed.getMeasure(), seed.getContext(), practitionerRef);
+                    return evaluator.evaluateSubjectListMeasure( seed.getMeasure(), seed.getContext(), practitionerRef );
                 case "population":
-                    return evaluator.evaluatePopulationMeasure(seed.getMeasure(), seed.getContext());
+                    return evaluator.evaluatePopulationMeasure( seed.getMeasure(), seed.getContext() );
                 default:
-                    throw new IllegalArgumentException("Invalid report type: " + reportType);
+                    throw new IllegalArgumentException( "Invalid report type: " + reportType );
             }
         }
 
@@ -194,34 +207,32 @@ public class MeasureOperationsProvider {
 
     // @Operation(name = "$evaluate-measure-with-source", idempotent = true)
     // public MeasureReport evaluateMeasure(@IdParam IdType theId,
-    // @OperationParam(name = "sourceData", min = 1, max = 1, type = Bundle.class)
-    // Bundle sourceData,
-    // @OperationParam(name = "periodStart", min = 1, max = 1) String periodStart,
-    // @OperationParam(name = "periodEnd", min = 1, max = 1) String periodEnd) {
-    // if (periodStart == null || periodEnd == null) {
-    // throw new IllegalArgumentException("periodStart and periodEnd are required
-    // for measure evaluation");
-    // }
-    // LibraryLoader libraryLoader =
-    // LibraryHelper.createLibraryLoader(this.libraryResourceProvider);
-    // MeasureEvaluationSeed seed = new MeasureEvaluationSeed(this.factory,
-    // libraryLoader, this.libraryResourceProvider);
-    // Measure measure = this.getDao().read(theId);
+    //         @OperationParam(name = "sourceData", min = 1, max = 1, type = Bundle.class) Bundle sourceData,
+    //         @OperationParam(name = "periodStart", min = 1, max = 1) String periodStart,
+    //         @OperationParam(name = "periodEnd", min = 1, max = 1) String periodEnd)
+    // {
+    //     if (periodStart == null || periodEnd == null) {
+    //         throw new IllegalArgumentException("periodStart and periodEnd are required for measure evaluation ");
+    //     }
+    //     LibraryLoader libraryLoader =
+    //         LibraryHelper.createLibraryLoader(this.libraryResourceProvider);
+    //     MeasureEvaluationSeed seed = new MeasureEvaluationSeed(this.factory,
+    //         libraryLoader, this.libraryResourceProvider);
+    //     Measure measure = this.getDao().read(theId);
 
-    // if (measure == null) {
-    // throw new RuntimeException("Could not find Measure/" + theId.getIdPart());
-    // }
+    //     if (measure == null) {
+    //         throw new RuntimeException("Could not find Measure/" + theId.getIdPart());
+    //     }
 
-    // seed.setup(measure, periodStart, periodEnd, null, null, null, null);
-    // BundleDataProviderStu3 bundleProvider = new
-    // BundleDataProviderStu3(sourceData);
-    // bundleProvider.setTerminologyProvider(provider.getTerminologyProvider());
-    // seed.getContext().registerDataProvider("http://hl7.org/fhir",
-    // bundleProvider);
-    // MeasureEvaluation evaluator = new MeasureEvaluation(bundleProvider,
-    // seed.getMeasurementPeriod());
-    // return evaluator.evaluatePatientMeasure(seed.getMeasure(), seed.getContext(),
-    // "");
+    //     seed.setup(measure, periodStart, periodEnd, null, null, null, null);
+    //     BundleDataProviderStu3 bundleProvider = new
+    //     BundleDataProviderStu3(sourceData);
+    //     bundleProvider.setTerminologyProvider(provider.getTerminologyProvider());
+    //     seed.getContext().registerDataProvider("http://hl7.org/fhir",
+    //         bundleProvider);
+    //     MeasureEvaluation evaluator = new MeasureEvaluation(bundleProvider,
+    //         seed.getMeasurementPeriod());
+    //     return evaluator.evaluatePatientMeasure(seed.getMeasure(), seed.getContext(), "");
     // }
 
     @Operation(name = "$care-gaps", idempotent = true, type = Measure.class)
@@ -271,29 +282,26 @@ public class MeasureOperationsProvider {
                 returnParams.setId( ( status==null?"all-gaps": status ) + "-" + _subject.replace( "/","_" ) + "-report" );
 
                 // I don't know how to format this
-                ( getPatientListFromGroup( _subject ) )
-                    .forEach(
-                        groupSubject -> resolvePatientGapBundleForMeasures( _periodStart,
-                                                                            _periodEnd,
-                                                                            _subject,
-                                                                            topic,
-                                                                            status,
-                                                                            returnParams,
-                                                                            measures,
-                                                                            "return",
-                                                                            organization
-                                                                        ));
-
+                (getPatientListFromGroup( _subject ) )
+                .forEach(
+                    groupSubject -> resolvePatientGapBundleForMeasures( _periodStart,
+                        _periodEnd,
+                        _subject,
+                        topic,
+                        status,
+                        returnParams,
+                        measures,
+                        "return",
+                        organization
+                    ));
             }
             else if ( Strings.isNullOrEmpty( practitioner ) )
             {
                 String parameterName = "Gaps in Care Report - " + subject;
                 resolvePatientGapBundleForMeasures( _periodStart, _periodEnd, _subject, topic, status, returnParams, measures, parameterName, organization );
             }
-
             return returnParams;
         }
-
         return returnParams;  
     }
 
@@ -334,29 +342,40 @@ public class MeasureOperationsProvider {
             throw new IllegalArgumentException( "If a practitioner is specified then an organization must also be specified." );
         }
 
-        if (!Strings.isNullOrEmpty(practitioner) && Strings.isNullOrEmpty(organization)) {
+        if ( !Strings.isNullOrEmpty( practitioner ) && Strings.isNullOrEmpty( organization) )
+        {
             // //TODO - add this - left out for now 'cause we need a subject to develop
             // if (!Strings.isNullOrEmpty(subject)) {
             //     throw new IllegalArgumentException("If practitioner and organization is specified then subject may not be specified.");
             // }
         }
-        if(Strings.isNullOrEmpty(subject) && Strings.isNullOrEmpty(practitioner) && Strings.isNullOrEmpty(organization)) {
+
+        if ( Strings.isNullOrEmpty( subject ) && Strings.isNullOrEmpty( practitioner ) && Strings.isNullOrEmpty( organization ) )
+        {
             throw new IllegalArgumentException("periodStart AND periodEnd AND (subject OR organization OR (practitioner AND organization)) MUST be provided");
         }
-        if(!Strings.isNullOrEmpty(subject)) {
-            if (!subject.startsWith("Patient/") && !subject.startsWith("Group/")) {
+
+        if ( !Strings.isNullOrEmpty( subject ) ) {
+            if ( !subject.startsWith( "Patient/" ) && !subject.startsWith( "Group/" ) )
+            {
                 throw new IllegalArgumentException("Subject must follow the format of either 'Patient/ID' OR 'Group/ID'.");
             }
         }
-        if (status == null || status.isEmpty()) {
+        
+        if ( status == null || status.isEmpty() )
+        {
             throw new IllegalArgumentException("Status is required.");
         }
-        for (String statusValue: status) {
-            if(!Strings.isNullOrEmpty(statusValue) && (!statusValue.equalsIgnoreCase("open-gap") && !statusValue.equalsIgnoreCase("closed-gap"))){
-                throw new IllegalArgumentException("Status must be either 'open-gap', 'closed-gap', or both.");
+
+        for ( String statusValue: status ) {
+            if ( !Strings.isNullOrEmpty( statusValue ) && ( !statusValue.equalsIgnoreCase( "open-gap" ) && !statusValue.equalsIgnoreCase( "closed-gap" ) ) )
+            {
+                throw new IllegalArgumentException( "Status must be either 'open-gap', 'closed-gap', or both." );
             }
         }
-        if (measureIdentifier != null && !measureIdentifier.isEmpty()) {
+
+        if ( measureIdentifier != null && !measureIdentifier.isEmpty() )
+        {
             throw new NotYetImplementedException("measureIdentifier Not Yet Implemented.");
         }
         return true;
@@ -518,8 +537,19 @@ public class MeasureOperationsProvider {
             }
 
             // TODO - this is configured for patient-level evaluation only
-            report = evaluateMeasure(measure.getIdElement(), periodStart, periodEnd, null, "patient", subject, null,
-            null, null, null, null, null);
+            report = evaluateMeasure(
+                measure.getIdElement(),
+                periodStart,
+                periodEnd,
+                null,
+                "patient",
+                subject,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null);
 
             report.setId(UUID.randomUUID().toString());
             report.setDate(new Date());
@@ -739,9 +769,11 @@ public class MeasureOperationsProvider {
 
     @Operation(name = "$collect-data", idempotent = true, type = Measure.class)
     public Parameters collectData(@IdParam IdType theId, @OperationParam(name = "periodStart") String periodStart,
-            @OperationParam(name = "periodEnd") String periodEnd, @OperationParam(name = "patient") String patientRef,
-            @OperationParam(name = "practitioner") String practitionerRef,
-            @OperationParam(name = "lastReceivedOn") String lastReceivedOn) throws FHIRException {
+            @OperationParam(name = "periodEnd")      String periodEnd,
+            @OperationParam(name = "patient")        String patientRef,
+            @OperationParam(name = "practitioner")   String practitionerRef,
+            @OperationParam(name = "lastReceivedOn") String lastReceivedOn) throws FHIRException
+    {
         // TODO: Spec says that the periods are not required, but I am not sure what to
         // do when they aren't supplied so I made them required
         MeasureReport report = evaluateMeasure(theId, periodStart, periodEnd, null, null, patientRef, null,
