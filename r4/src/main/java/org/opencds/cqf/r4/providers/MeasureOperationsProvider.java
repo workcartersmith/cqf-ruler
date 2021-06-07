@@ -524,7 +524,6 @@ public class MeasureOperationsProvider {
 
         List<MeasureReport> reports = new ArrayList<>();
         List<DetectedIssue> detectedIssues = new ArrayList<DetectedIssue>();
-        System.out.println( "====================================================================================================");
         MeasureReport report = null;
 
         for ( Measure measure : measures )
@@ -555,11 +554,12 @@ public class MeasureOperationsProvider {
             report.setDate(new Date());
             report.setImprovementNotation(measure.getImprovementNotation());
             //TODO: this is an org hack && requires an Organization to be in the ruler
-            if (org != null && org.size() > 0) {
-                report.setReporter(new Reference("Organization/" + org.get(0).getIdElement().getIdPart()));
+            if ( org != null && org.size() > 0 )
+            {
+                report.setReporter( new Reference( "Organization/" + org.get( 0 ).getIdElement().getIdPart() ) );
             }
-            report.setMeta(new Meta().addProfile("http://hl7.org/fhir/us/davinci-deqm/StructureDefinition/indv-measurereport-deqm"));
-            section.setFocus(new Reference("MeasureReport/" + report.getId()));
+            report.setMeta( new Meta().addProfile( "http://hl7.org/fhir/us/davinci-deqm/StructureDefinition/indv-measurereport-deqm" ) );
+            section.setFocus( new Reference( "MeasureReport/" + report.getId() ) );
             //TODO: DetectedIssue
             //section.addEntry(new Reference("MeasureReport/" + report.getId()));
 
@@ -569,39 +569,43 @@ public class MeasureOperationsProvider {
                 // as a code
                 String improvementNotation = measure.getImprovementNotation().getCodingFirstRep().getCode().toLowerCase();
                 DetectedIssue detectedIssue = new DetectedIssue();
-                detectedIssue.setMeta(new Meta().addProfile("http://hl7.org/fhir/us/davinci-deqm/StructureDefinition/gaps-detectedissue-deqm"));
-                if (closedGap(improvementNotation, proportion)) {
-                        if (notReportingClosedGaps(status)) {
-                            continue;
-                        }
-                        else {
-                            detectedIssue.addModifierExtension(
-                                new Extension("http://hl7.org/fhir/us/davinci-deqm/StructureDefinition/extension-gapStatus",
-                                new CodeableConcept(
-                                    new Coding("http://hl7.org/fhir/us/davinci-deqm/CodeSystem/gaps-status", "closed-gap", null)
-                                ))
-                            );
-                        }
-                } else {
-                    if (notReportingOpenGaps(status)) {
+                detectedIssue.setMeta( new Meta().addProfile( "http://hl7.org/fhir/us/davinci-deqm/StructureDefinition/gaps-detectedissue-deqm" ) );
+                if ( closedGap( improvementNotation, proportion ) )
+                {
+                    if ( notReportingClosedGaps( status ) )
+                    {
                         continue;
                     }
-                    else {
+                    else
+                    {
                         detectedIssue.addModifierExtension(
-                            new Extension("http://hl7.org/fhir/us/davinci-deqm/StructureDefinition/extension-gapStatus",
+                            new Extension( "http://hl7.org/fhir/us/davinci-deqm/StructureDefinition/extension-gapStatus",
                             new CodeableConcept(
-                                new Coding("http://hl7.org/fhir/us/davinci-deqm/CodeSystem/gaps-status", "open-gap", null)
+                                new Coding( "http://hl7.org/fhir/us/davinci-deqm/CodeSystem/gaps-status", "closed-gap", null )
                             ))
                         );
                     }
-                    section.setText(new Narrative()
-                            .setStatus(Narrative.NarrativeStatus.GENERATED)
-                            .setDiv(new XhtmlNode().setValue("<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>No detected issues.</p></div>")));
+                }
+                else
+                {
+                    if ( notReportingOpenGaps( status ) )
+                    {
+                        continue;
+                    }
+                    else
+                    {
+                        detectedIssue.addModifierExtension(
+                            new Extension( "http://hl7.org/fhir/us/davinci-deqm/StructureDefinition/extension-gapStatus",
+                            new CodeableConcept(
+                                new Coding( "http://hl7.org/fhir/us/davinci-deqm/CodeSystem/gaps-status", "open-gap", null )
+                            ))
+                        );
+                    }
+                    section.setText( new Narrative()
+                            .setStatus( Narrative.NarrativeStatus.GENERATED)
+                            .setDiv( new XhtmlNode().setValue( "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>No detected issues.</p></div>" ) ) );
                 }
 
-;
-                
-                
                 // Set up the list and iterator bois we'll be using.
                 List<MeasureReportGroupComponent> curGroups = report.getGroup();
                 Iterator<MeasureReportGroupPopulationComponent> turboIterator;
@@ -622,23 +626,23 @@ public class MeasureOperationsProvider {
                     }
 
                     detectedIssues.add( detectedIssue );
-                    detectedIssue.setId(UUID.randomUUID().toString());
-                    detectedIssue.setStatus(DetectedIssue.DetectedIssueStatus.FINAL);
-                    detectedIssue.setPatient(new Reference(subject.startsWith("Patient/") ? subject : "Patient/" + subject));
-                    detectedIssue.getEvidence().add(new DetectedIssue.DetectedIssueEvidenceComponent().addDetail(new Reference("MeasureReport/" + report.getId())));
+                    detectedIssue.setId( UUID.randomUUID().toString() );
+                    detectedIssue.setStatus( DetectedIssue.DetectedIssueStatus.FINAL );
+                    detectedIssue.setPatient( new Reference( subject.startsWith( "Patient/" ) ? subject : "Patient/" + subject ) );
+                    detectedIssue.getEvidence().add( new DetectedIssue.DetectedIssueEvidenceComponent().addDetail(new Reference( "MeasureReport/" + report.getId() ) ) );
                     CodeableConcept code = new CodeableConcept()
-                        .addCoding(new Coding()
-                        .setSystem("http://terminology.hl7.org/CodeSystem/v3-ActCode")
-                        .setCode("CAREGAP")
-                        .setDisplay("Care Gaps"));
-                    detectedIssue.setCode(code);
+                        .addCoding( new Coding()
+                        .setSystem( "http://terminology.hl7.org/CodeSystem/v3-ActCode" )
+                        .setCode( "CAREGAP" )
+                        .setDisplay( "Care Gaps" ) );
+                    detectedIssue.setCode( code );
 
                     section.addEntry(
-                        new Reference("DetectedIssue/" + detectedIssue.getIdElement().getIdPart()));
-                    }
+                        new Reference( "DetectedIssue/" + detectedIssue.getIdElement().getIdPart() ) );
+                }
 
-                    composition.addSection(section);
-                    reports.add(report);
+                composition.addSection( section );
+                reports.add( report );
 
                 // TODO - add other types of improvement notation cases
             }
@@ -653,42 +657,46 @@ public class MeasureOperationsProvider {
         for ( MeasureReport rep : reports )
         {
             careGapReport.addEntry( new Bundle.BundleEntryComponent().setResource(rep ) );
-            if ( report.hasContained() )
+            if ( !report.hasContained() )
             {
-                for ( Resource contained : report.getContained() )
+                continue;
+            }
+
+            for ( Resource contained : report.getContained() )
+            {
+                if ( !( contained instanceof Bundle ) )
                 {
-                    if ( contained instanceof Bundle )
-                    {
-                        addEvaluatedResourcesToParameters( (Bundle) contained, parameters );
-                        if ( null != parameters && !parameters.isEmpty() )
-                        {
-                            List <Reference> evaluatedResource = new ArrayList<>();
+                    continue;
+                }
 
-                            parameters.getParameter().forEach(parameter -> {
-                                Reference newEvaluatedResourceItem = new Reference();
-                                newEvaluatedResourceItem.setReference(parameter.getResource().getId() );
-                                List<Extension> evalResourceExt = new ArrayList<>();
+                addEvaluatedResourcesToParameters( (Bundle) contained, parameters );
+                if ( null != parameters && !parameters.isEmpty() )
+                {
+                    List <Reference> evaluatedResource = new ArrayList<>();
 
-                                evalResourceExt.add(
-                                        new Extension("http://hl7.org/fhir/us/davinci-deqm/StructureDefinition/extension-populationReference",
-                                        new CodeableConcept()
-                                                .addCoding(
-                                                    new Coding(
-                                                        "http://teminology.hl7.org/CodeSystem/measure-population",
-                                                        "initial-population",
-                                                        "initial-population"
-                                                    )
-                                                )
+                    parameters.getParameter().forEach(parameter -> {
+                        Reference newEvaluatedResourceItem = new Reference();
+                        newEvaluatedResourceItem.setReference(parameter.getResource().getId() );
+                        List<Extension> evalResourceExt = new ArrayList<>();
+
+                        evalResourceExt.add(
+                                new Extension("http://hl7.org/fhir/us/davinci-deqm/StructureDefinition/extension-populationReference",
+                                new CodeableConcept()
+                                        .addCoding(
+                                            new Coding(
+                                                "http://teminology.hl7.org/CodeSystem/measure-population",
+                                                "initial-population",
+                                                "initial-population"
                                             )
-                                        );
+                                        )
+                                    )
+                                );
 
-                                newEvaluatedResourceItem.setExtension(evalResourceExt);
-                                evaluatedResource.add(newEvaluatedResourceItem);
-                            });
+                        newEvaluatedResourceItem.setExtension(evalResourceExt);
+                        evaluatedResource.add(newEvaluatedResourceItem);
+                    });
 
-                            report.setEvaluatedResource(evaluatedResource);
-                        }
-                    }
+                    report.setEvaluatedResource(evaluatedResource);
                 }
             }
         }
