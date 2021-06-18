@@ -6,35 +6,36 @@ import org.hl7.fhir.dstu3.model.Coding;
 import org.hl7.fhir.dstu3.model.Extension;
 import org.hl7.fhir.dstu3.model.UriType;
 import org.opencds.cqf.ruler.core.api.capability.CapabilityStatementExtender;
-import org.opencds.cqf.ruler.core.api.config.HapiProperties;
-import org.springframework.stereotype.Component;
-
+import org.opencds.cqf.ruler.sdc.config.SdcProperties;
 /**
- *      This class is NOT designed to be a real OAuth provider.
- *      It is designed to provide a capability statement and to pass thru the path to the real oauth verification server.
- *      It should only get instantiated if hapi.properties has oauth.enabled set to true.
+ * This class adds OAuth redirect information to the CapabilityStatement
  */
-@Component
 public class OAuthExtender implements CapabilityStatementExtender<CapabilityStatement> {
+
+    private SdcProperties sdcProperties;
+
+    public OAuthExtender(SdcProperties sdcProperties) {
+        this.sdcProperties = sdcProperties;
+    }
 
     @Override
     public CapabilityStatement extend(CapabilityStatement capabilityStatement) {
-        capabilityStatement.getRestFirstRep().getSecurity().setCors(HapiProperties.getOauthSecurityCors());
+        capabilityStatement.getRestFirstRep().getSecurity().setCors(sdcProperties.getOauth().getSecurity().getCors());
         Extension securityExtension = capabilityStatement.getRestFirstRep().getSecurity().addExtension();
-        securityExtension.setUrl(HapiProperties.getOauthSecurityUrl());
+        securityExtension.setUrl(sdcProperties.getOauth().getSecurity().getUrl());
         // security.extension.extension
         Extension securityExtExt = securityExtension.addExtension();
-        securityExtExt.setUrl(HapiProperties.getOauthSecurityExtAuthUrl());
-        securityExtExt.setValue(new UriType(HapiProperties.getOauthSecurityExtAuthValueUri()));
+        securityExtExt.setUrl(sdcProperties.getOauth().getSecurity().getExt_auth_url());
+        securityExtExt.setValue(new UriType(sdcProperties.getOauth().getSecurity().getExt_auth_value_uri()));
         Extension securityTokenExt = securityExtension.addExtension();
-        securityTokenExt.setUrl(HapiProperties.getOauthSecurityExtTokenUrl());
-        securityTokenExt.setValue(new UriType(HapiProperties.getOauthSecurityExtTokenValueUri()));
+        securityTokenExt.setUrl(sdcProperties.getOauth().getSecurity().getExt_token_url());
+        securityTokenExt.setValue(new UriType(sdcProperties.getOauth().getSecurity().getExt_token_value_uri()));
 
         // security.extension.service
         Coding coding = new Coding();
-        coding.setSystem(HapiProperties.getOauthServiceSystem());
-        coding.setCode(HapiProperties.getOauthServiceCode());
-        coding.setDisplay(HapiProperties.getOauthServiceDisplay());
+        coding.setSystem(sdcProperties.getOauth().getService().getSystem());
+        coding.setCode(sdcProperties.getOauth().getService().getCode());
+        coding.setDisplay(sdcProperties.getOauth().getService().getDisplay());
         CodeableConcept codeConcept = new CodeableConcept();
         codeConcept.addCoding(coding);
         capabilityStatement.getRestFirstRep().getSecurity().getService().add(codeConcept);
@@ -42,5 +43,4 @@ public class OAuthExtender implements CapabilityStatementExtender<CapabilityStat
 
         return capabilityStatement;
     }
-
 }

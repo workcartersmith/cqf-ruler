@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.boot.web.servlet.ServletRegistrationBean;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
@@ -12,6 +13,7 @@ import org.springframework.web.context.support.AnnotationConfigWebApplicationCon
 import org.springframework.web.servlet.DispatcherServlet;
 
 import ca.uhn.fhir.jpa.mdm.MdmConfig;
+import ca.uhn.fhir.jpa.starter.BaseJpaRestfulServer;
 import ca.uhn.fhir.jpa.starter.FhirTesterConfig;
 import ca.uhn.fhir.jpa.starter.annotations.OnEitherVersion;
 import ca.uhn.fhir.jpa.subscription.channel.config.SubscriptionChannelConfig;
@@ -22,6 +24,7 @@ import ca.uhn.fhir.jpa.subscription.submit.config.SubscriptionSubmitterConfig;
 @Configuration
 @Import({ SubscriptionSubmitterConfig.class, SubscriptionProcessorConfig.class, SubscriptionChannelConfig.class,
     WebsocketDispatcherConfig.class, MdmConfig.class })
+@ComponentScan(basePackageClasses = BaseJpaRestfulServer.class)
 public class CqfRulerConfig {
 
   @Autowired

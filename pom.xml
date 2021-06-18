@@ -12,9 +12,9 @@
         <module>cqf-ruler-core</module>
         <module>cqf-ruler-cr</module>
         <module>cqf-ruler-developer</module>
-        <!-- <module>cqf-ruler-sdc</module> -->
+        <module>cqf-ruler-sdc</module>
+        <module>cqf-ruler-cpg</module>
         <!-- <module>cqf-ruler-cds-hooks</module> -->
-        <!-- <module>cqf-ruler-cpg</module> -->
         <module>cqf-ruler</module>
     </modules>
 

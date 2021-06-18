@@ -17,22 +17,21 @@ import ca.uhn.fhir.context.FhirVersionEnum;
 @Conditional(FhirVersionCondition.class)
 @FhirVersion(FhirVersionEnum.R4)
 public class SdcConfigR4 {
-
     @Bean
-    @ConditionalOnProperty(value = "hapi.fhir.sdc.oauth.enabled", havingValue = "true", matchIfMissing = false)
-    public OAuthExtender oauthExtender() {
-        return new OAuthExtender();
+    @ConditionalOnProperty(prefix = "hapi.fhir.sdc.oauth", value = "enabled", havingValue = "true", matchIfMissing = false)
+    public OAuthExtender oauthExtender(SdcProperties sdcProperties) {
+        return new OAuthExtender(sdcProperties);
     }
 
     @Bean
-    @ConditionalOnProperty(value = "hapi.fhir.sdc.observation_transform.enabled", havingValue = "true", matchIfMissing = false)
-    public ObservationProvider observationProvider(FhirContext fhirContext) {
-        return new ObservationProvider(fhirContext);
+    @ConditionalOnProperty(prefix = "hapi.fhir.sdc.observation_transform", value = "enabled", havingValue = "true", matchIfMissing = false)
+    public ObservationProvider observationProvider(FhirContext fhirContext, SdcProperties sdcProperties) {
+        return new ObservationProvider(fhirContext, sdcProperties);
     }
 
     @Bean
-    @ConditionalOnProperty(value = "hapi.fhir.sdc.observation_extract.enabled", havingValue = "true", matchIfMissing = false)
-    public QuestionnaireProvider questionnaireProvider(FhirContext fhirContext) {
-        return new QuestionnaireProvider(fhirContext);
+    @ConditionalOnProperty(prefix = "hapi.fhir.sdc.questionnaire_response_extract", value = "enabled", havingValue = "true", matchIfMissing = false)
+    public QuestionnaireProvider questionnaireProvider(FhirContext fhirContext, SdcProperties sdcProperties) {
+        return new QuestionnaireProvider(fhirContext, sdcProperties);
     }
 }

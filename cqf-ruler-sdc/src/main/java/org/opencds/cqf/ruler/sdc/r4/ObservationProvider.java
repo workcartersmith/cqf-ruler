@@ -9,8 +9,8 @@ import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.ConceptMap;
 import org.hl7.fhir.r4.model.Observation;
-import org.opencds.cqf.ruler.core.api.config.HapiProperties;
-import org.springframework.stereotype.Component;
+import org.opencds.cqf.ruler.core.api.provider.OperationProvider;
+import org.opencds.cqf.ruler.sdc.config.SdcProperties;
 
 import java.util.HashMap;
 import java.util.List;
@@ -20,14 +20,15 @@ import javax.inject.Inject;
 
 import static org.opencds.cqf.ruler.core.helpers.ClientHelper.getClient;
 
-@Component
-public class ObservationProvider {
+public class ObservationProvider implements OperationProvider {
 
     private FhirContext fhirContext;
+    private SdcProperties sdcProperties;
 
     @Inject
-    public ObservationProvider(FhirContext fhirContext){
+    public ObservationProvider(FhirContext fhirContext, SdcProperties sdcProperties){
         this.fhirContext = fhirContext;
+        this.sdcProperties = sdcProperties;
     }
 
     @Operation(name = "$transform", idempotent = false, type = Observation.class)
@@ -41,7 +42,7 @@ public class ObservationProvider {
         if(null == conceptMapURL) {
             throw new IllegalArgumentException("Unable to perform operation Observation$transform.  No concept map url specified.");
         }
-        IGenericClient client = getClient(fhirContext, conceptMapURL, HapiProperties.getObservationTransformUsername(), HapiProperties.getObservationTransformPassword() );
+        IGenericClient client = getClient(fhirContext, conceptMapURL, sdcProperties.getObservationTransform().getUsername(), sdcProperties.getObservationTransform().getPassword());
         ConceptMap transformConceptMap = client.read().resource(ConceptMap.class).withUrl (conceptMapURL).execute();
         if(null == transformConceptMap) {
             throw new IllegalArgumentException("Unable to perform operation Observation$transform.  Unable to get concept map.");
@@ -64,7 +65,7 @@ public class ObservationProvider {
                     String obsValueCode = observation.getValueCodeableConcept().getCoding().get(0).getCode();
                     if(obsValueCode != null) {
                         if (codeMappings.get(observation.getValueCodeableConcept().getCoding().get(0).getCode()) != null) {
-                            if (HapiProperties.getObservationTransformReplaceCode()) {
+                            if (sdcProperties.getObservationTransform().getReplace_code()) {
                                 observation.getValueCodeableConcept().getCoding().get(0).setCode(codeMappings.get(obsValueCode).getCode());
                                 observation.getValueCodeableConcept().getCoding().get(0).setDisplay(codeMappings.get(obsValueCode).getDisplay());
                                 observation.getValueCodeableConcept().getCoding().get(0).setSystem(targetSystem);

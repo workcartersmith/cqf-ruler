@@ -5,8 +5,8 @@ import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
 import ca.uhn.fhir.rest.client.api.IGenericClient;
 import org.hl7.fhir.r4.model.*;
-import org.opencds.cqf.ruler.core.api.config.HapiProperties;
-import org.springframework.stereotype.Component;
+import org.opencds.cqf.ruler.core.api.provider.OperationProvider;
+import org.opencds.cqf.ruler.sdc.config.SdcProperties;
 
 import java.util.Collections;
 import java.util.Date;
@@ -17,14 +17,15 @@ import javax.inject.Inject;
 
 import static org.opencds.cqf.ruler.core.helpers.ClientHelper.getClient;
 
-@Component
-public class QuestionnaireProvider {
+public class QuestionnaireProvider implements OperationProvider {
 
     private FhirContext fhirContext;
+    private SdcProperties sdcProperties;
 
     @Inject
-    public QuestionnaireProvider(FhirContext fhirContext) {
+    public QuestionnaireProvider(FhirContext fhirContext, SdcProperties sdcProperties) {
         this.fhirContext = fhirContext;
+        this.sdcProperties = sdcProperties;
     }
 
     @Operation(name = "$extract", idempotent = false, type = QuestionnaireResponse.class)
@@ -124,13 +125,13 @@ public class QuestionnaireProvider {
     }
 
     private Bundle sendObservationBundle(Bundle observationsBundle) throws IllegalArgumentException {
-        String url = HapiProperties.getQuestionnaireResponseExtractEndpoint();
+        String url = sdcProperties.getQuestionnaireResponseExtract().getEndpoint();
         if (null == url || url.length() < 1) {
             throw new IllegalArgumentException(
                     "Unable to transmit observation bundle.  No observation.endpoint defined in hapi.properties.");
         }
-        String user = HapiProperties.getQuestionnaireResponseExtractUserName();
-        String password = HapiProperties.getQuestionnaireResponseExtractPassword();
+        String user = sdcProperties.getQuestionnaireResponseExtract().getUsername();
+        String password = sdcProperties.getQuestionnaireResponseExtract().getPassword();
 
         IGenericClient client = getClient(fhirContext, url, user, password);
         Bundle outcomeBundle = client.transaction().withBundle(observationsBundle).execute();
@@ -138,13 +139,13 @@ public class QuestionnaireProvider {
     }
 
     private Map<String, Coding> getQuestionnaireCodeMap(String questionnaireUrl) {
-        String url = HapiProperties.getQuestionnaireResponseExtractEndpoint();
+        String url = sdcProperties.getQuestionnaireResponseExtract().getEndpoint();
         if (null == url || url.length() < 1) {
             throw new IllegalArgumentException(
                     "Unable to GET Questionnaire.  No observation.endpoint defined in hapi.properties.");
         }
-        String user = HapiProperties.getQuestionnaireResponseExtractUserName();
-        String password = HapiProperties.getQuestionnaireResponseExtractPassword();
+        String user = sdcProperties.getQuestionnaireResponseExtract().getUsername();
+        String password = sdcProperties.getQuestionnaireResponseExtract().getPassword();
 
         IGenericClient client = getClient(fhirContext, url, user, password);
         Questionnaire questionnaire = client.read().resource(Questionnaire.class).withUrl(questionnaireUrl).execute();

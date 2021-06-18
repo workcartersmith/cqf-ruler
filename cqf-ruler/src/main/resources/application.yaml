@@ -132,6 +132,42 @@ hapi:
 ###   1: NORMALIZED_QUANTITY_STORAGE_SUPPORTED
 ###   2: NORMALIZED_QUANTITY_SEARCH_SUPPORTED
 #    normalized_quantity_search_level: 2
+    # cql:
+    #   debug: true
+    # cds_hooks:
+    #   debug: true
+    #   callback:
+    #     max_codes_per_query: 64
+    #     expand_value_sets: true
+    #     search_style: POST
+    #     page_size: 100
+    #   prefetch:
+    #     max_uri_length: 512
+    sdc:
+      oauth:
+        enabled: true
+        security:
+          cors: true
+          url: 'http://fhir-registry.smarthealthit.org/StructureDefinition/oauth-uris'
+          ext_auth_url: 'authorize'
+          ext_auth_value_uri: 'http://launch.smarthealthit.org/v/r4/auth/authorize'
+          ext_token_url: 'token'
+          ext_token_value_uri: 'http://launch.smarthealthit.org/v/r4/auth/token'
+        service:
+          system: 'http://hl7.org/fhir/restful-security-service'
+          code: 'SMART-on-FHIR'
+          display: 'SMART-on-FHIR'
+          text: 'OAuth2 using SMART-on-FHIR profile (see http://docs.smarthealthit.org)'
+      questionnaire_response_extract:
+        enabled: true
+        endpoint: 'http://localhost:8080/fhir'
+        # username: 'username'
+        # password: 'password'
+      observation_transform:
+        enabled: true
+        replace_code: false
+        # username: 'username'
+        # password: 'password'
 #elasticsearch:
 #  debug:
 #    pretty_print_json_log: false
@@ -143,39 +179,3 @@ hapi:
 #  protocol: 'http'
 #  schema_management_strategy: CREATE
 #  username: SomeUsername
-
-
-
-##################################################
-# OAuth Settings
-##################################################
-# oauth.enabled=false
-# oauth.securityCors=true
-# oauth.securityUrl=http://fhir-registry.smarthealthit.org/StructureDefinition/oauth-uris
-# oauth.securityExtAuthUrl=authorize
-# oauth.securityExtAuthValueUri=http://launch.smarthealthit.org/v/r4/auth/authorize
-# oauth.securityExtTokenUrl=token
-# oauth.securityExtTokenValueUri=http://launch.smarthealthit.org/v/r4/auth/token
-# oauth.serviceSystem=http://hl7.org/fhir/restful-security-service
-# oauth.serviceCode=SMART-on-FHIR
-# oauth.serviceDisplay=SMART-on-FHIR
-# oauth.serviceText=OAuth2 using SMART-on-FHIR profile (see http://docs.smarthealthit.org)
-
-# questionnaireResponseExtract.enabled=true
-# questionnaireResponseExtract.endpoint=http://localhost:8080/cqf-ruler-r4/fhir
-# #  https://cds4cpm-develop.sandbox.alphora.com/cqf-ruler-r4/fhir
-# questionnaireResponseExtract.username=
-# questionnaireResponseExtract.password=
-
-# observationTransform.enabled=true
-# observationTransform.username=
-# observationTransform.password=
-# observationTransform.replaceCode=false
-
-# ##################################################
-# # CDS-Hooks Settings
-# ##################################################
-# cds_hooks.fhirServer.maxCodesPerQuery=
-# cds_hooks.fhirServer.expandValueSets=
-# cds_hooks.fhirServer.searchStyle=
-# cds_hooks.prefetch.maxUriLength=
