@@ -257,7 +257,12 @@ public class MeasureOperationsProvider {
     }
 
     private Boolean careGapParameterValidation(String periodStart, String periodEnd, String subject, String topic,
-            String practitioner, List<String> measureId, List<String> measureIdentifier, List<CanonicalType> measureUrl, List<String> status, String organization, String program) {
+            String practitioner, List<String> measureId, List<String> measureIdentifier, List<CanonicalType> measureUrl, List<String> status, String organization, String program)
+    {
+        if (!subject.startsWith("Patient") && !subject.startsWith("Group")) {
+            throw new IllegalArgumentException("subject parameter must start with either 'Patient' or 'Group'");
+        }
+
         if(Strings.isNullOrEmpty(periodStart) || Strings.isNullOrEmpty(periodEnd)) {
             throw new IllegalArgumentException("periodStart and periodEnd are required.");
         }
@@ -518,6 +523,7 @@ public class MeasureOperationsProvider {
         Reference newEvaluatedResourceItem = new Reference();
         // This is hard coded as of now. My understanding is that absolute urls are only
         // used when the reference is fragmented. This cannot possibly be fragmented with the current logic.
+
         newEvaluatedResourceItem.setReference(subject.startsWith("Patient/") ? subject : "Patient/" + subject);
         newEvaluatedResourceItem.setExtension(evalResourceExt);
         evaluatedResource.add(newEvaluatedResourceItem);
