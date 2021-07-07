@@ -16,6 +16,7 @@ import org.hl7.fhir.instance.model.api.IAnyResource;
 import org.hl7.fhir.instance.model.api.IBase;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.*;
+import org.hl7.fhir.r4.model.Bundle.BundleEntryComponent;
 import org.hl7.fhir.utilities.xhtml.XhtmlNode;
 import org.opencds.cqf.common.evaluation.EvaluationProviderFactory;
 import org.opencds.cqf.common.providers.LibraryResolutionProvider;
@@ -30,18 +31,23 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
+import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.jpa.api.dao.DaoRegistry;
 import ca.uhn.fhir.jpa.rp.r4.MeasureResourceProvider;
 import ca.uhn.fhir.jpa.searchparam.SearchParameterMap;
 import ca.uhn.fhir.rest.api.MethodOutcome;
 import ca.uhn.fhir.rest.api.RestOperationTypeEnum;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
+import ca.uhn.fhir.rest.client.api.IGenericClient;
 import ca.uhn.fhir.rest.param.TokenParam;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
+import org.opencds.cqf.common.helpers.ClientHelper;
+
 
 @Component
 public class MeasureOperationsProvider {
 
+    private FhirContext fhirContext = FhirContext.forR4();
     private NarrativeProvider narrativeProvider;
     private HQMFProvider hqmfProvider;
     private DataRequirementsProvider dataRequirementsProvider;
@@ -419,7 +425,6 @@ public class MeasureOperationsProvider {
         MeasureReport report = null;
 
         for (Measure measure : measures) {
-
             Composition.SectionComponent section = new Composition.SectionComponent();
 
             if (measure.hasTitle()) {
@@ -438,6 +443,7 @@ public class MeasureOperationsProvider {
                 report.setReporter(new Reference("Organization/" + org.get(0).getIdElement().getIdPart()));
             }
             report.setMeta(new Meta().addProfile("http://hl7.org/fhir/us/davinci-deqm/StructureDefinition/indv-measurereport-deqm"));
+
             section.setFocus(new Reference("MeasureReport/" + report.getId()));
             //TODO: DetectedIssue
             //section.addEntry(new Reference("MeasureReport/" + report.getId()));
@@ -502,8 +508,29 @@ public class MeasureOperationsProvider {
             return null;
         }
         Parameters parameters = new Parameters();
-        
-        careGapReport.addEntry(new Bundle.BundleEntryComponent().setResource(composition));
+
+        List<Extension> evalResourceExt = new ArrayList<>();
+        Extension extension = new Extension("http://hl7.org/fhir/us/davinci-deqm/StructureDefinition/extension-populationReference");
+        extension.setValue(new StringType("initial-population"));
+        evalResourceExt.add(extension);
+
+        List <Reference> evaluatedResource = new ArrayList<>();
+        Reference newEvaluatedResourceItem = new Reference();
+        // This is hard coded as of now. My understanding is that absolute urls are only
+        // used when the reference is fragmented. This cannot possibly be fragmented with the current logic.
+        newEvaluatedResourceItem.setReference(subject.startsWith("Patient/") ? subject : "Patient/" + subject);
+        newEvaluatedResourceItem.setExtension(evalResourceExt);
+        evaluatedResource.add(newEvaluatedResourceItem);
+
+        BundleEntryComponent bundleEntryComponent = new Bundle.BundleEntryComponent();
+        // TEMP: DD-26 related
+        // TODO: This obviously cannot be left as localhost. With the level of abstraction, 
+        // it's much more efficient to ask what the preferred way of fetching the current server base url is.
+        IGenericClient restfulClient = fhirContext.newRestfulGenericClient("https://localhost:8080/cqf-ruler/fhir/");
+        bundleEntryComponent.setResource(composition);
+        bundleEntryComponent.setFullUrl(restfulClient.getServerBase());
+        careGapReport.addEntry(bundleEntryComponent);
+
         for (MeasureReport rep : reports) {
             careGapReport.addEntry(new Bundle.BundleEntryComponent().setResource(rep));
             if (report.hasContained()) {
@@ -511,23 +538,19 @@ public class MeasureOperationsProvider {
                     if (contained instanceof Bundle) {
                         addEvaluatedResourcesToParameters((Bundle) contained, parameters);
                         if(null != parameters && !parameters.isEmpty()) {
-                            List <Reference> evaluatedResource = new ArrayList<>();
                             parameters.getParameter().forEach(parameter -> {
-                                Reference newEvaluatedResourceItem = new Reference();
                                 newEvaluatedResourceItem.setReference(parameter.getResource().getId());
-                                List<Extension> evalResourceExt = new ArrayList<>();
-                                evalResourceExt.add(new Extension("http://hl7.org/fhir/us/davinci-deqm/StructureDefinition/extension-populationReference",
-                                        new CodeableConcept()
-                                                .addCoding(new Coding("http://teminology.hl7.org/CodeSystem/measure-population", "initial-population", "initial-population"))));
+                                // evalResourceExt.addNewExtension previously here
                                 newEvaluatedResourceItem.setExtension(evalResourceExt);
                                 evaluatedResource.add(newEvaluatedResourceItem);
                             });
-                            report.setEvaluatedResource(evaluatedResource);
                         }
                     }
+                    report.setEvaluatedResource(evaluatedResource);
                 }
             }
         }
+
         for (DetectedIssue detectedIssue : detectedIssues) {
             careGapReport.addEntry(new Bundle.BundleEntryComponent().setResource(detectedIssue));
         }
