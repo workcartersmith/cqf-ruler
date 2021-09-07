@@ -14,6 +14,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import ca.uhn.fhir.rest.client.api.ServerValidationModeEnum;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
@@ -116,6 +117,12 @@ public class CdsHooksServlet extends HttpServlet {
         response.getWriter().println(new GsonBuilder().setPrettyPrinting().create().toJson(getServices()));
     }
 
+    private FhirContext getCDSHooksFHIRContext(){
+        FhirContext r4FHIRContext = FhirContext.forR4();
+        r4FHIRContext.getRestfulClientFactory().setServerValidationMode(ServerValidationModeEnum.NEVER);
+        return r4FHIRContext;
+    }
+
     @Override
     @SuppressWarnings("deprecation")
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
@@ -190,7 +197,7 @@ public class CdsHooksServlet extends HttpServlet {
             context.setExpressionCaching(true);
 
             EvaluationContext<PlanDefinition> evaluationContext = new R4EvaluationContext(hook, version,
-                    FhirContext.forR4().newRestfulGenericClient(baseUrl), jpaTerminologyProvider, context, library,
+                    getCDSHooksFHIRContext().newRestfulGenericClient(baseUrl), jpaTerminologyProvider, context, library,
                     planDefinition, this.getProviderConfiguration());
 
             this.setAccessControlHeaders(response);
@@ -296,7 +303,7 @@ public class CdsHooksServlet extends HttpServlet {
 
     private JsonObject getServices() {
         DiscoveryResolutionR4 discoveryResolutionR4 = new DiscoveryResolutionR4(
-                FhirContext.forR4().newRestfulGenericClient(HapiProperties.getServerAddress()));
+                getCDSHooksFHIRContext().newRestfulGenericClient(HapiProperties.getServerAddress()));
         discoveryResolutionR4.setMaxUriLength(this.getProviderConfiguration().getMaxUriLength());
         return discoveryResolutionR4.resolve()
                         .getAsJson();
