@@ -530,6 +530,14 @@ public class MeasureOperationsProvider {
 
         for (Measure measure : measures) {
 
+            ///////////////////////////////////////////////////////////////////
+            // If we were passed a topic, and that topic was not present in
+            // this current measure, goto the next measure in the list.
+            if (topic != null) {
+                if (!measure.getTopic().toString().toLowerCase().contains(topic.toLowerCase()))
+                    continue;
+            }
+
             Composition.SectionComponent section = new Composition.SectionComponent();
 
             if (measure.hasTitle()) {
