@@ -543,23 +543,25 @@ public class MeasureOperationsProvider {
             report.setId(UUID.randomUUID().toString());
             report.setDate(new Date());
             report.setImprovementNotation(measure.getImprovementNotation());
-            //TODO: this is an org hack && requires an Organization to be in the ruler
+
+            // TODO: this is an org hack && requires an Organization to be in the ruler
             Resource org = getReportingOrganization();
             if (org != null) {
                 report.setReporter(new Reference(org));
             }
             report.setMeta(new Meta().addProfile("http://hl7.org/fhir/us/davinci-deqm/StructureDefinition/indv-measurereport-deqm"));
             section.setFocus(new Reference("MeasureReport/" + report.getId()));
-            //TODO: DetectedIssue
+            // TODO: DetectedIssue
             //section.addEntry(new Reference("MeasureReport/" + report.getId()));
 
             if (report.hasGroup() && measure.hasScoring()) {
                 double proportion = resolveProportion(report, measure);
-                // TODO - this is super hacky ... change once improvementNotation is specified
-                // as a code
+                // TODO - this is super hacky ... change once improvementNotation is specified as a code.
                 String improvementNotation = measure.getImprovementNotation().getCodingFirstRep().getCode().toLowerCase();
+
                 DetectedIssue detectedIssue = new DetectedIssue();
                 detectedIssue.setMeta(new Meta().addProfile("http://hl7.org/fhir/us/davinci-deqm/StructureDefinition/gaps-detectedissue-deqm"));
+
                 if (closedGap(improvementNotation, proportion)) {
                         if (notReportingClosedGaps(status)) {
                             continue;
@@ -573,8 +575,12 @@ public class MeasureOperationsProvider {
                             );
                         }
                 } else {
+                    /* Seems silly for now, but should(eventually) return a list of integers(indices)
+                    * for each location. */
+                    int notInIpCheck = reportingNotInIp(status);
                     if (notReportingOpenGaps(status)) {
-                        continue;
+                        if (notInIpCheck == -1)
+                            continue;
                     }
                     else {
                         detectedIssue.addModifierExtension(
@@ -715,6 +721,23 @@ public class MeasureOperationsProvider {
         return proportion;
     }
 
+    // Takes list of status strings.
+    // Returns the index of any string containing not-in-ip.
+    // If none are found, returns -1.
+    private int reportingNotInIp(List<String> status) {
+        int ret = -1;
+        if (status.stream().anyMatch(x -> x.equalsIgnoreCase("not-in-ip"))) {
+            if (status.size() > 1) {
+                /* TODO: In event of status list containing multiple statuses containing
+                    "not-in-ip", currently, only one will be handled properly. */
+            } else {
+                // Note: I don't think Java has a single function to find a str's index without case sensitivity...
+                ret = status.indexOf("not-in-ip");
+            }
+        }
+        return ret;
+    }
+
     private boolean notReportingOpenGaps(List<String> status) {
         return !status.stream().anyMatch(x -> x.equalsIgnoreCase("open-gap"));
     }
@@ -731,33 +754,33 @@ public class MeasureOperationsProvider {
     @Operation(name = "$report", idempotent = true, type = MeasureReport.class)
     public Parameters report(@OperationParam(name = "periodStart", min = 1, max = 1) String periodStart,
                                      @OperationParam(name = "periodEnd", min = 1, max = 1) String periodEnd,
-                                     @OperationParam(name = "subject", min = 1, max = 1) String subject) throws FHIRException { 
+                                     @OperationParam(name = "subject", min = 1, max = 1) String subject) throws FHIRException {
         if (periodStart == null) {
             throw new IllegalArgumentException("Parameter 'periodStart' is required.");
-        }    
+        }
         if (periodEnd == null) {
             throw new IllegalArgumentException("Parameter 'periodEnd' is required.");
-        }    
+        }
         Date periodStartDate = DateHelper.resolveRequestDate(periodStart, true);
         Date periodEndDate = DateHelper.resolveRequestDate(periodEnd, false);
         if (periodStartDate.after(periodEndDate)) {
             throw new IllegalArgumentException("Parameter 'periodStart' must be before 'periodEnd'.");
         }
- 
+
         if (!subject.startsWith("Patient/") && !subject.startsWith("Group/")) {
             throw new IllegalArgumentException("Parameter 'subject' must be in the format 'Patient/[id]' or 'Group/[id]'.");
         }
 
         Parameters returnParams = new Parameters();
         returnParams.setId(subject.replace("/", "-") + "-report");
-               
+
         (getPatientListFromSubject(subject))
             .forEach(
                 patientSubject -> {
                     Parameters.ParametersParameterComponent patientParameter = patientReport(periodStartDate, periodEndDate, patientSubject.getReference());
                     returnParams.addParameter(patientParameter);
                 }
-            );        
+            );
 
         return returnParams;
     }
@@ -772,14 +795,14 @@ public class MeasureOperationsProvider {
             patientReportBundle.setTimestamp(new Date());
             patientReportBundle.setId(subject.replace("/", "-") + "-report");
             patientReportBundle.setIdentifier(new Identifier().setSystem("urn:ietf:rfc:3986").setValue("urn:uuid:" + UUID.randomUUID().toString()));
-            
+
         IFhirResourceDao<MeasureReport> measureReportDao = this.registry.getResourceDao(MeasureReport.class);
         measureReportDao.search(theParams).getAllResources().forEach(baseResource -> {
-            MeasureReport measureReport = (MeasureReport)baseResource;        
+            MeasureReport measureReport = (MeasureReport)baseResource;
             if (measureReport.getPeriod().getStart().before(periodStart) || measureReport.getPeriod().getEnd().after(periodEnd)) {
                 return;
-            }           
-            
+            }
+
             patientReportBundle.addEntry(
                 new Bundle.BundleEntryComponent()
                     .setResource(measureReport)
@@ -902,7 +925,7 @@ public class MeasureOperationsProvider {
         /*
          * TODO - resource validation using $data-requirements operation (params are the
          * provided id and the measurement period from the MeasureReport)
-         * 
+         *
          * TODO - profile validation ... not sure how that would work ... (get
          * StructureDefinition from URL or must it be stored in Ruler?)
          */
@@ -960,7 +983,7 @@ public class MeasureOperationsProvider {
         return transactionEntry;
     }
 
-    
+
     @Operation(name = "$extract-line-list-data", idempotent = false)
     public Bundle extractLineListData(RequestDetails details,
         @OperationParam(name = "measureReport", min = 0, max = 1, type = MeasureReport.class) MeasureReport report,
