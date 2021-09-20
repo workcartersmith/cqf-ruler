@@ -191,6 +191,7 @@ public class MeasureOperationsProvider {
             @OperationParam(name = "lastReceivedOn") String lastReceivedOn,
             @OperationParam(name = "source") String source, @OperationParam(name = "user") String user,
             @OperationParam(name = "pass") String pass) throws InternalErrorException, FHIRException {
+
         LibraryLoader libraryLoader = this.libraryHelper.createLibraryLoader(this.libraryResolutionProvider);
         MeasureEvaluationSeed seed = new MeasureEvaluationSeed(this.factory, libraryLoader,
                 this.libraryResolutionProvider, this.libraryHelper);
@@ -982,24 +983,44 @@ public class MeasureOperationsProvider {
         Map<String, Bundle> eicrs = new HashMap<String, Bundle>();
         for (Entry<String, Reference> entry : populationSubjectListReferenceMap.entrySet()) {
             // IQueryParameterType compositionReferenceParam = new ReferenceParam("subject", entry.getKey());
+
             SearchParameterMap map = SearchParameterMap.newSynchronous();//.add("composition", compositionReferenceParam);
             logger.warn(map.toNormalizedQueryString(measureResourceProvider.getContext()));
             List<IBaseResource> bundles = registry.getResourceDao(Bundle.class).search(map).getAllResources();
+
             for (IBaseResource baseBundle : bundles) {
-                if (baseBundle instanceof Bundle) {
-                    Bundle bundle = (Bundle) baseBundle;
-                    if (bundle.hasEntry() && !bundle.getEntry().isEmpty() && bundle.hasType() && bundle.getType().equals(Bundle.BundleType.DOCUMENT)) {
-                        IBaseResource firstEntry = bundle.getEntry().get(0).getResource();
-                        if (!(firstEntry instanceof Composition)) {
-                            logger.debug(String.format("Any bundle of type document must have the first entry of type Composition, but found: %s", firstEntry.fhirType()));
-                        } else {
-                            Composition composition = (Composition) firstEntry;
-                            String[] referenceSplit = composition.getSubject().getReference().split("/");
-                            if (composition.getSubject().equals(entry.getValue()) || composition.getSubject().getReference().equals(entry.getKey())) {
-                                eicrs.putIfAbsent(entry.getKey(), bundle);
-                            } else if (referenceSplit.length > 1 && referenceSplit[1].equals(entry.getKey())) {
-                                eicrs.putIfAbsent(entry.getKey(), bundle);
-                            }
+                if (!(baseBundle instanceof Bundle))
+                    continue;
+
+                Bundle bundle = (Bundle) baseBundle;
+                if (bundle.hasEntry() && !bundle.getEntry().isEmpty() && bundle.hasType() && bundle.getType().equals(Bundle.BundleType.DOCUMENT)) {
+                    IBaseResource firstEntry = bundle.getEntry().get(0).getResource();
+
+                    if (!(firstEntry instanceof Composition)) {
+                        logger.debug(String.format("Any bundle of type document must have the first entry of type Composition, but found: %s", firstEntry.fhirType()));
+                    } else {
+                        Composition composition = (Composition) firstEntry;
+                        String[] referenceSplit = composition.getSubject().getReference().split("/");
+
+                        if (composition
+                                .getSubject()
+                                .getReference()
+                                .toLowerCase()
+                                .contains("patient") &&
+                                composition
+                                        .getSubject()
+                                        .getReference()
+                                        .toLowerCase()
+                                        .contains("group"))
+                        {
+                            throw new IllegalArgumentException(
+                                    "Reference must be one of either 'Patient' or 'Group, not both.");
+                        }
+
+                        if (composition.getSubject().equals(entry.getValue()) || composition.getSubject().getReference().equals(entry.getKey())) {
+                            eicrs.putIfAbsent(entry.getKey(), bundle);
+                        } else if (referenceSplit.length > 1 && referenceSplit[1].equals(entry.getKey())) {
+                            eicrs.putIfAbsent(entry.getKey(), bundle);
                         }
                     }
                 }
