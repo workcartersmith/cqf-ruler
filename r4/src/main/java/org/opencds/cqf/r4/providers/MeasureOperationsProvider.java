@@ -1,5 +1,8 @@
 package org.opencds.cqf.r4.providers;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -340,11 +343,34 @@ public class MeasureOperationsProvider {
             String practitioner, List<String> measureId, List<String> measureIdentifier, List<CanonicalType> measureUrl, List<String> status,
             String organization, String program, String periodStartIndice, String periodEndIndice, String subjectIndice) {
 
-        if (periodStart.size() > 1)
+        DateTimeFormatter dtFormatter = DateTimeFormatter.ofPattern("yyyy-dd-mm");
+        int periodStartSize = periodStart.size();
+        int periodEndSize = periodEnd.size();
+
+        if (periodStartSize > 1)
             throw new IllegalArgumentException("Only one periodStart argument can be supplied.");
 
-        if (periodEnd.size() > 1)
+        if (periodEndSize > 1)
             throw new IllegalArgumentException("Only one periodEnd argument can be supplied.");
+
+        /// Test type of periodStart/periodEnd.
+        LocalDateTime testParse;
+        if (periodStartSize == 1) {
+            try {
+                 testParse = LocalDateTime.parse(periodStart.get(0), dtFormatter);
+            } catch (DateTimeParseException e) {
+                throw new IllegalArgumentException("periodStart parameter must be a date.");
+            }
+        }
+
+        if (periodEndSize == 1) {
+            try {
+                testParse = LocalDateTime.parse(periodEnd.get(0), dtFormatter);
+            } catch (DateTimeParseException e) {
+                throw new IllegalArgumentException("periodEnd parameter must be a date.");
+            }
+        }
+        ///
 
         if (subject.size() > 1 || subject.size() <= 0)
             throw new IllegalArgumentException("You must supply one and only one subject argument.");
