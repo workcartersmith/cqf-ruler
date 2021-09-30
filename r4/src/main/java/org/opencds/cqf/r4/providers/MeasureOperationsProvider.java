@@ -1,8 +1,7 @@
 package org.opencds.cqf.r4.providers;
 
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -343,7 +342,7 @@ public class MeasureOperationsProvider {
             String practitioner, List<String> measureId, List<String> measureIdentifier, List<CanonicalType> measureUrl, List<String> status,
             String organization, String program, String periodStartIndice, String periodEndIndice, String subjectIndice) {
 
-        DateTimeFormatter dtFormatter = DateTimeFormatter.ofPattern("yyyy-dd-mm");
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
         int periodStartSize = periodStart.size();
         int periodEndSize = periodEnd.size();
 
@@ -354,19 +353,19 @@ public class MeasureOperationsProvider {
             throw new IllegalArgumentException("Only one periodEnd argument can be supplied.");
 
         /// Test type of periodStart/periodEnd.
-        LocalDateTime testParse;
         if (periodStartSize == 1) {
             try {
-                 testParse = LocalDateTime.parse(periodStart.get(0), dtFormatter);
-            } catch (DateTimeParseException e) {
+                sdf.parse(periodStartIndice);
+            } catch (ParseException e) {
+                e.printStackTrace();
                 throw new IllegalArgumentException("periodStart parameter must be a date.");
             }
         }
 
         if (periodEndSize == 1) {
             try {
-                testParse = LocalDateTime.parse(periodEnd.get(0), dtFormatter);
-            } catch (DateTimeParseException e) {
+                sdf.parse(periodEndIndice);
+            } catch (ParseException e) {
                 throw new IllegalArgumentException("periodEnd parameter must be a date.");
             }
         }
