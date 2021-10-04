@@ -2,6 +2,7 @@ package org.opencds.cqf.r4.providers;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -352,7 +353,7 @@ public class MeasureOperationsProvider {
         if (periodEndSize > 1)
             throw new IllegalArgumentException("Only one periodEnd argument can be supplied.");
 
-        /// Test type of periodStart/periodEnd.
+        // Test type of periodStart/periodEnd.
         if (periodStartSize == 1) {
             try {
                 sdf.parse(periodStartIndice);
@@ -369,7 +370,16 @@ public class MeasureOperationsProvider {
                 throw new IllegalArgumentException("periodEnd parameter must be a date.");
             }
         }
-        ///
+
+        // At this point, we're sure both periodStart and periodEnd are date types, so it's safe to set the timezone.
+        String addUTC = ZoneId.of("US/Mountain")
+                            .getRules()
+                            .getOffset(Instant.now())
+                            .toString();
+
+        periodStartIndice += addUTC;
+        periodEndIndice   += addUTC;
+        //----------------------------------------------------------------------------------------------------------
 
         if (subject.size() > 1 || subject.size() <= 0)
             throw new IllegalArgumentException("You must supply one and only one subject argument.");
