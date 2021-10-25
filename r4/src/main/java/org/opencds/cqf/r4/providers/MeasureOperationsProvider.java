@@ -54,6 +54,7 @@ import org.opencds.cqf.common.helpers.DateHelper;
 import org.opencds.cqf.cql.engine.data.DataProvider;
 import org.opencds.cqf.cql.evaluator.cql2elm.content.LibraryContentProvider;
 import org.opencds.cqf.cql.evaluator.fhir.dal.FhirDal;
+import org.opencds.cqf.cql.evaluator.measure.MeasureEvalConfig;
 import org.opencds.cqf.tooling.library.r4.NarrativeProvider;
 import org.opencds.cqf.tooling.measure.r4.CqfMeasure;
 import org.slf4j.Logger;
@@ -205,7 +206,10 @@ public class MeasureOperationsProvider {
             @OperationParam(name = "lastReceivedOn") String lastReceivedOn,
             @OperationParam(name = "source") String source, @OperationParam(name = "user") String user,
             @OperationParam(name = "pass") String pass) throws InternalErrorException, FHIRException {
-        org.opencds.cqf.cql.evaluator.measure.r4.R4MeasureProcessor measureProcessor = new org.opencds.cqf.cql.evaluator.measure.r4.R4MeasureProcessor(null, null, null, null, null, jpaTerminologyProvider, libraryContentProvider, dataProvider, fhirDal, null, this.globalLibraryCache);
+        MeasureEvalConfig measureEvalConfig = MeasureEvalConfig.defaultConfig();
+        measureEvalConfig.setParallelEnabled(false);
+        measureEvalConfig.setParallelThreshold(150);
+        org.opencds.cqf.cql.evaluator.measure.r4.R4MeasureProcessor measureProcessor = new org.opencds.cqf.cql.evaluator.measure.r4.R4MeasureProcessor(null, null, null, null, null, jpaTerminologyProvider, libraryContentProvider, dataProvider, fhirDal, measureEvalConfig, this.globalLibraryCache);
         Measure measure = this.registry.getResourceDao(Measure.class).read(theId);
         MeasureReport report = measureProcessor.evaluateMeasure(measure.getUrl(), periodStart, periodEnd, reportType, patientRef, null, lastReceivedOn, null, null, null, null);
 

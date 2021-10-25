@@ -12,6 +12,7 @@ import java.util.stream.Collectors;
 import javax.inject.Inject;
 
 import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.opencds.cqf.common.search.FastSearchParameterMap;
 import org.opencds.cqf.cql.engine.fhir.retrieve.SearchParamFhirRetrieveProvider;
 import org.opencds.cqf.cql.engine.fhir.searchparam.SearchParameterMap;
 import org.opencds.cqf.cql.engine.fhir.searchparam.SearchParameterResolver;
@@ -54,7 +55,7 @@ public class JpaFhirRetrieveProvider extends SearchParamFhirRetrieveProvider {
     protected Collection<Object> executeQuery(String dataType, SearchParameterMap map) {
         // TODO: Once HAPI breaks this out from the server dependencies
         // we can include it on its own.
-        ca.uhn.fhir.jpa.searchparam.SearchParameterMap hapiMap = ca.uhn.fhir.jpa.searchparam.SearchParameterMap.newSynchronous();
+        ca.uhn.fhir.jpa.searchparam.SearchParameterMap hapiMap = FastSearchParameterMap.newSynchronous();
         try {
 
             Method[] methods = hapiMap.getClass().getDeclaredMethods();
