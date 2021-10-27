@@ -36,6 +36,7 @@ public class JpaFhirRetrieveProvider extends SearchParamFhirRetrieveProvider {
     public JpaFhirRetrieveProvider(DaoRegistry registry, SearchParameterResolver searchParameterResolver) {
         super(searchParameterResolver);
         this.registry = registry;
+        this.setMaxCodesPerQuery(1024);
     }
 
     @Override
@@ -55,10 +56,11 @@ public class JpaFhirRetrieveProvider extends SearchParamFhirRetrieveProvider {
     protected Collection<Object> executeQuery(String dataType, SearchParameterMap map) {
         // TODO: Once HAPI breaks this out from the server dependencies
         // we can include it on its own.
-        ca.uhn.fhir.jpa.searchparam.SearchParameterMap hapiMap = FastSearchParameterMap.newSynchronous();
+        FastSearchParameterMap hapiMap = FastSearchParameterMap.newSynchronous();
+        // ca.uhn.fhir.jpa.searchparam.SearchParameterMap hapiMap = ca.uhn.fhir.jpa.searchparam.SearchParameterMap.newSynchronous();
         try {
 
-            Method[] methods = hapiMap.getClass().getDeclaredMethods();
+            Method[] methods = hapiMap.getClass().getSuperclass().getDeclaredMethods();
             List<Method> methodList = Arrays.asList(methods);
             List<Method> puts = methodList.stream().filter(x -> x.getName().equals("put")).collect(Collectors.toList());
             Method method = puts.get(0);
@@ -70,6 +72,7 @@ public class JpaFhirRetrieveProvider extends SearchParamFhirRetrieveProvider {
 
         } catch (Exception e) {
             logger.warn("Error converting search parameter map", e);
+            throw new RuntimeException(e);
         }
 
         IFhirResourceDao<?> dao = this.registry.getResourceDao(dataType);

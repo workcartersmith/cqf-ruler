@@ -11,6 +11,7 @@ import org.cqframework.cql.cql2elm.CqlTranslatorOptions;
 import org.cqframework.cql.cql2elm.model.Model;
 import org.cqframework.cql.elm.execution.Library;
 import org.hl7.elm.r1.VersionedIdentifier;
+import org.opencds.cqf.common.config.FhirServerConfig;
 import org.opencds.cqf.common.config.HapiProperties;
 import org.opencds.cqf.common.providers.CacheAwareTerminologyProvider;
 import org.opencds.cqf.common.retrieve.JpaFhirRetrieveProvider;
@@ -37,6 +38,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.context.annotation.Primary;
 import org.springframework.orm.jpa.JpaTransactionManager;
@@ -55,6 +57,7 @@ import ca.uhn.fhir.jpa.searchparam.SearchParameterMap;
 
 @Configuration
 @ComponentScan(basePackages = "org.opencds.cqf.dstu3")
+@Import(FhirServerConfig.class)
 public class FhirServerConfigDstu3 extends BaseJavaConfigDstu3 {
     protected final DataSource myDataSource;
 
@@ -80,6 +83,7 @@ public class FhirServerConfigDstu3 extends BaseJavaConfigDstu3 {
     @Bean()
     public LocalContainerEntityManagerFactoryBean entityManagerFactory() {
         LocalContainerEntityManagerFactoryBean retVal = super.entityManagerFactory();
+        retVal.setPackagesToScan("ca.uhn.fhir.jpa.model.entity", "ca.uhn.fhir.jpa.entity", "org.opencds.cqf.common.evaluation.entity");
         retVal.setPersistenceUnitName(HapiProperties.getPersistenceUnitName());
 
         try {

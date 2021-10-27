@@ -27,14 +27,14 @@ import ca.uhn.fhir.util.UrlUtil;
 public class FastSearchParameterMap extends SearchParameterMap {
 
 
-    public static SearchParameterMap newSynchronous() {
-		SearchParameterMap retVal = new FastSearchParameterMap();
+    public static FastSearchParameterMap newSynchronous() {
+		FastSearchParameterMap retVal = new FastSearchParameterMap();
 		retVal.setLoadSynchronous(true);
 		return retVal;
 	}
 
-	public static SearchParameterMap newSynchronous(String theName, IQueryParameterType theParam) {
-		SearchParameterMap retVal = new FastSearchParameterMap();
+	public static FastSearchParameterMap newSynchronous(String theName, IQueryParameterType theParam) {
+		FastSearchParameterMap retVal = new FastSearchParameterMap();
 		retVal.setLoadSynchronous(true);
 		retVal.add(theName, theParam);
 		return retVal;
@@ -57,11 +57,10 @@ public class FastSearchParameterMap extends SearchParameterMap {
 
 				List<IQueryParameterType> nextValuesOrsOut = new ArrayList<>();
 				for (IQueryParameterType nextValueOrIn : nextValuesAndIn) {
-					if (nextValueOrIn.getMissing() != null || isNotBlank(nextValueOrIn.getValueAsQueryToken(theCtx))) {
+					if (nextValueOrIn.getMissing() != null || isNotBlank(stringCache.computeIfAbsent(nextValueOrIn, k -> k.getValueAsQueryToken(theCtx)))) {
 						nextValuesOrsOut.add(nextValueOrIn);
 					}
 				}
-
 
 				nextValuesOrsOut.sort(new QueryParameterTypeComparator(theCtx, stringCache));
 
@@ -100,7 +99,7 @@ public class FastSearchParameterMap extends SearchParameterMap {
 					if (i > 0) {
 						b.append(',');
 					}
-					String valueAsQueryToken = nextValueOr.getValueAsQueryToken(theCtx);
+					String valueAsQueryToken = stringCache.computeIfAbsent(nextValueOr, k -> k.getValueAsQueryToken(theCtx));
 					b.append(UrlUtil.escapeUrlParam(valueAsQueryToken));
 				}
 			}

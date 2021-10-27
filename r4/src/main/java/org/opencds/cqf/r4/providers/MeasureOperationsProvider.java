@@ -1,5 +1,6 @@
 package org.opencds.cqf.r4.providers;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -12,6 +13,7 @@ import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 import javax.servlet.http.HttpServletRequest;
+import javax.transaction.Transactional;
 
 import com.google.common.base.Strings;
 
@@ -29,6 +31,7 @@ import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Composition;
 import org.hl7.fhir.r4.model.DetectedIssue;
+import org.hl7.fhir.r4.model.Endpoint;
 import org.hl7.fhir.r4.model.Extension;
 import org.hl7.fhir.r4.model.Group;
 import org.hl7.fhir.r4.model.IdType;
@@ -39,10 +42,12 @@ import org.hl7.fhir.r4.model.Measure;
 import org.hl7.fhir.r4.model.MeasureReport;
 import org.hl7.fhir.r4.model.MeasureReport.MeasureReportGroupComponent;
 import org.hl7.fhir.r4.model.MeasureReport.MeasureReportGroupPopulationComponent;
+import org.hl7.fhir.r4.model.MeasureReport.MeasureReportStatus;
 import org.hl7.fhir.r4.model.Meta;
 import org.hl7.fhir.r4.model.Narrative;
 import org.hl7.fhir.r4.model.Organization;
 import org.hl7.fhir.r4.model.Parameters;
+import org.hl7.fhir.r4.model.Period;
 import org.hl7.fhir.r4.model.Reference;
 import org.hl7.fhir.r4.model.RelatedArtifact;
 import org.hl7.fhir.r4.model.Resource;
@@ -50,11 +55,21 @@ import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.utilities.xhtml.XhtmlNode;
 import org.opencds.cqf.common.config.HapiProperties;
 import org.opencds.cqf.common.evaluation.EvaluationProviderFactory;
+import org.opencds.cqf.common.evaluation.model.MeasureEvalJobBatchJson;
+import org.opencds.cqf.common.evaluation.model.MeasureEvalJobBatchStatusEnum;
+import org.opencds.cqf.common.evaluation.model.MeasureEvalJobJson;
+import org.opencds.cqf.common.evaluation.model.MeasureEvalJobStatusEnum;
+import org.opencds.cqf.common.evaluation.svc.IMeasureEvalJobSvc;
 import org.opencds.cqf.common.helpers.DateHelper;
 import org.opencds.cqf.cql.engine.data.DataProvider;
+import org.opencds.cqf.cql.engine.runtime.DateTime;
+import org.opencds.cqf.cql.engine.runtime.Interval;
 import org.opencds.cqf.cql.evaluator.cql2elm.content.LibraryContentProvider;
 import org.opencds.cqf.cql.evaluator.fhir.dal.FhirDal;
 import org.opencds.cqf.cql.evaluator.measure.MeasureEvalConfig;
+import org.opencds.cqf.cql.evaluator.measure.common.MeasureEvalType;
+import org.opencds.cqf.cql.evaluator.measure.common.MeasureProcessor;
+import org.opencds.cqf.cql.evaluator.measure.r4.R4MeasureProcessor;
 import org.opencds.cqf.tooling.library.r4.NarrativeProvider;
 import org.opencds.cqf.tooling.measure.r4.CqfMeasure;
 import org.slf4j.Logger;
@@ -79,6 +94,7 @@ import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.param.ReferenceParam;
 import ca.uhn.fhir.rest.param.TokenParam;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
+import ca.uhn.fhir.util.JsonUtil;
 
 @Component
 public class MeasureOperationsProvider {
@@ -99,6 +115,10 @@ public class MeasureOperationsProvider {
     private LibraryContentProvider libraryContentProvider;
     private FhirDal fhirDal;
     private Map<org.cqframework.cql.elm.execution.VersionedIdentifier, Library> globalLibraryCache;
+
+    private IMeasureEvalJobSvc measureEvalJobSvc;
+
+    private IFhirResourceDao<MeasureReport> measureReportDao;
     
     @Inject
     public MeasureOperationsProvider(DaoRegistry registry, EvaluationProviderFactory factory,
@@ -109,7 +129,9 @@ public class MeasureOperationsProvider {
             DataProvider dataProvider,
             LibraryContentProvider libraryContentProvider,
             FhirDal fhirDal,
-            Map<org.cqframework.cql.elm.execution.VersionedIdentifier, Library> globalLibraryCache) {
+            Map<org.cqframework.cql.elm.execution.VersionedIdentifier, Library> globalLibraryCache,
+            IMeasureEvalJobSvc measureEvalJobSvc,
+            IFhirResourceDao<MeasureReport> measureReportDao) {
         this.registry = registry;
         this.libraryResolutionProvider = libraryResolutionProvider;
         this.narrativeProvider = narrativeProvider;
@@ -122,6 +144,9 @@ public class MeasureOperationsProvider {
         this.libraryContentProvider = libraryContentProvider;
         this.fhirDal = fhirDal;
         this.globalLibraryCache = globalLibraryCache;
+
+        this.measureEvalJobSvc = measureEvalJobSvc;
+        this.measureReportDao = measureReportDao;
     }
 
     @Operation(name = "$hqmf", idempotent = true, type = Measure.class)
@@ -200,18 +225,34 @@ public class MeasureOperationsProvider {
     public MeasureReport evaluateMeasure(@IdParam IdType theId,
             @OperationParam(name = "periodStart") String periodStart,
             @OperationParam(name = "periodEnd") String periodEnd, @OperationParam(name = "measure") String measureRef,
-            @OperationParam(name = "reportType") String reportType, @OperationParam(name = "patient") String patientRef,
+            @OperationParam(name = "reportType") String reportType, 
+            @OperationParam(name = "patient") String patientRef,
+            @OperationParam(name = "subject") String subjectRef,
             @OperationParam(name = "productLine") String productLine,
             @OperationParam(name = "practitioner") String practitionerRef,
             @OperationParam(name = "lastReceivedOn") String lastReceivedOn,
             @OperationParam(name = "source") String source, @OperationParam(name = "user") String user,
             @OperationParam(name = "pass") String pass) throws InternalErrorException, FHIRException {
+
         MeasureEvalConfig measureEvalConfig = MeasureEvalConfig.defaultConfig();
-        measureEvalConfig.setParallelEnabled(false);
+        measureEvalConfig.setParallelEnabled(true);
         measureEvalConfig.setParallelThreshold(150);
+
+        String subject = subjectRef != null ? addResourceTypeIfMissing("Patient", subjectRef) : patientRef != null ? addResourceTypeIfMissing("Patient", patientRef) : practitionerRef != null ? addResourceTypeIfMissing("Practioner", practitionerRef) : null;
+  
         org.opencds.cqf.cql.evaluator.measure.r4.R4MeasureProcessor measureProcessor = new org.opencds.cqf.cql.evaluator.measure.r4.R4MeasureProcessor(null, null, null, null, null, jpaTerminologyProvider, libraryContentProvider, dataProvider, fhirDal, measureEvalConfig, this.globalLibraryCache);
+
+
+        List<String> subjectIds = measureProcessor.getSubjects(reportType, subject);
         Measure measure = this.registry.getResourceDao(Measure.class).read(theId);
-        MeasureReport report = measureProcessor.evaluateMeasure(measure.getUrl(), periodStart, periodEnd, reportType, patientRef, null, lastReceivedOn, null, null, null, null);
+
+        MeasureReport report = null;
+        if (subjectIds.size() > 30) {
+            report = clusterMeasureEval(measure.getId(), periodStart, periodEnd, reportType, subject, subjectIds);
+        }
+        else{
+            report = measureProcessor.evaluateMeasure(measure.getUrl(), periodStart, periodEnd, reportType, subjectIds, fhirDal, null, null, null, null);
+        } 
 
         if (productLine != null) {
             Extension ext = new Extension();
@@ -222,6 +263,83 @@ public class MeasureOperationsProvider {
 
         return report;
     }
+
+    private String addResourceTypeIfMissing(String defaultResourceType, String id) {
+        if (!id.contains("/")) {
+            return defaultResourceType + "/" + id;
+        }
+        
+        return id;
+    }
+
+    @Transactional
+    private MeasureReport clusterMeasureEval(String measureId, String periodStart, String periodEnd, String reportType, String subject,
+    List<String> subjectIds) {
+        MeasureReport report = new MeasureReport();
+        report.setId(UUID.randomUUID().toString());
+        report.setMeasure(measureId);
+        report.setStatus(MeasureReportStatus.PENDING);
+        report.setPeriod(getPeriod(buildMeasurementPeriod(periodStart, periodEnd)));
+
+        List<List<String>> batches = R4MeasureProcessor.getBatches(subjectIds, 1000);
+
+        MeasureEvalJobJson jobJson = new MeasureEvalJobJson()
+            .setMeasureId(measureId)
+            .setMeasureReportId(report.getId())
+            .setPeriodStart(periodStart)
+            .setPeriodEnd(periodEnd)
+            .setReportType(reportType)
+            .setBatchSize(1000)
+            .setBatchCount(batches.size())
+            .setSubject(subject)
+            .setSubjectCount(subjectIds.size())
+            .setStatus(MeasureEvalJobStatusEnum.STAGING);
+
+        List<MeasureEvalJobBatchJson> batchJsons = new ArrayList<>();
+        for (List<String> batch : batches) {
+            String subjectContent = null;
+            try {
+                subjectContent = JsonUtil.serialize(batch);
+            }
+            catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            MeasureEvalJobBatchJson batchJson = new MeasureEvalJobBatchJson()
+                .setSubjectContents(subjectContent)
+                .setStatus(MeasureEvalJobBatchStatusEnum.STAGING);
+            batchJsons.add(batchJson);
+        }
+
+        this.measureReportDao.create(report);
+
+
+        String jobId = this.measureEvalJobSvc.createNewMeasureEvalJob(jobJson, batchJsons);
+        this.measureEvalJobSvc.markJobAsReadyForActivation(jobId);
+
+        return report;
+    }
+
+    private Interval buildMeasurementPeriod(String periodStart, String periodEnd) {
+        // resolve the measurement period
+        return new Interval(DateTime.fromJavaDate(DateHelper.resolveRequestDate(periodStart, true)), true,
+                DateTime.fromJavaDate(DateHelper.resolveRequestDate(periodEnd, false)), true);
+    }
+
+    protected Period getPeriod(Interval measurementPeriod) {
+        if (measurementPeriod.getStart() instanceof DateTime) {
+            DateTime dtStart = (DateTime) measurementPeriod.getStart();
+            DateTime dtEnd = (DateTime) measurementPeriod.getEnd();
+
+            return new Period().setStart(dtStart.toJavaDate()).setEnd(dtEnd.toJavaDate());
+
+        } else if (measurementPeriod.getStart() instanceof Date) {
+            return new Period().setStart((Date) measurementPeriod.getStart()).setEnd((Date) measurementPeriod.getEnd());
+        } else {
+            throw new IllegalArgumentException(
+                    "Measurement period should be an interval of CQL DateTime or Java Date objects");
+        }
+    }
+
 
     // @Operation(name = "$evaluate-measure-with-source", idempotent = true)
     // public MeasureReport evaluateMeasure(@IdParam IdType theId,

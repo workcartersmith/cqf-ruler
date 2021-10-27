@@ -11,7 +11,11 @@ import org.cqframework.cql.cql2elm.CqlTranslatorOptions;
 import org.cqframework.cql.cql2elm.model.Model;
 import org.cqframework.cql.elm.execution.Library;
 import org.hl7.elm.r1.VersionedIdentifier;
+import org.opencds.cqf.common.config.FhirServerConfig;
 import org.opencds.cqf.common.config.HapiProperties;
+import org.opencds.cqf.common.evaluation.svc.IMeasureEvalJobSvc;
+import org.opencds.cqf.common.evaluation.svc.MeasureEvalJobSvcImpl;
+import org.opencds.cqf.common.provider.MeasureEvalJobProvider;
 import org.opencds.cqf.common.providers.CacheAwareTerminologyProvider;
 import org.opencds.cqf.common.retrieve.JpaFhirRetrieveProvider;
 import org.opencds.cqf.cql.engine.data.CompositeDataProvider;
@@ -31,6 +35,7 @@ import org.opencds.cqf.r4.providers.ApplyCqlOperationProvider;
 import org.opencds.cqf.r4.providers.CacheValueSetsProvider;
 import org.opencds.cqf.r4.providers.CodeSystemUpdateProvider;
 import org.opencds.cqf.r4.providers.CqlExecutionProvider;
+import org.opencds.cqf.r4.providers.GroupGenerateProvider;
 import org.opencds.cqf.r4.providers.LibraryOperationsProvider;
 import org.opencds.cqf.r4.providers.MeasureOperationsProvider;
 import org.opencds.cqf.r4.providers.ObservationProvider;
@@ -42,6 +47,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.context.annotation.Primary;
 import org.springframework.orm.jpa.JpaTransactionManager;
@@ -60,6 +66,7 @@ import ca.uhn.fhir.jpa.searchparam.SearchParameterMap;
 
 @Configuration
 @ComponentScan(basePackages = "org.opencds.cqf.r4")
+@Import(FhirServerConfig.class)
 public class FhirServerConfigR4 extends BaseJavaConfigR4 {
     protected final DataSource myDataSource;
 
@@ -85,6 +92,7 @@ public class FhirServerConfigR4 extends BaseJavaConfigR4 {
     @Bean()
     public LocalContainerEntityManagerFactoryBean entityManagerFactory() {
         LocalContainerEntityManagerFactoryBean retVal = super.entityManagerFactory();
+        retVal.setPackagesToScan("ca.uhn.fhir.jpa.model.entity", "ca.uhn.fhir.jpa.entity", "org.opencds.cqf.common.evaluation.entity");
         retVal.setPersistenceUnitName(HapiProperties.getPersistenceUnitName());
 
         try {
@@ -120,6 +128,8 @@ public class FhirServerConfigR4 extends BaseJavaConfigR4 {
         classes.add(MeasureOperationsProvider.class);
         classes.add(PlanDefinitionApplyProvider.class);
         classes.add(ProcessMessageProvider.class);
+        classes.add(GroupGenerateProvider.class);
+        classes.add(MeasureEvalJobProvider.class);
 
         // The plugin API will need to a way to determine whether a particular
         // service should be registered
@@ -196,5 +206,10 @@ public class FhirServerConfigR4 extends BaseJavaConfigR4 {
     @Bean
     public FhirDal fhirDal(DaoRegistry daoRegistry) {
         return new RulerFhirDal(daoRegistry);
+    }
+
+    @Bean
+    public IMeasureEvalJobSvc measureEvalJobSvc() {
+        return new MeasureEvalJobSvcImpl();
     }
 }

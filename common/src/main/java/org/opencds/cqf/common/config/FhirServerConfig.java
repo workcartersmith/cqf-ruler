@@ -16,12 +16,15 @@ import org.cqframework.cql.elm.execution.Library;
 import org.cqframework.cql.elm.execution.VersionedIdentifier;
 import org.hl7.fhir.instance.model.api.IIdType;
 import org.opencds.cqf.cds.providers.ProviderConfiguration;
+import org.opencds.cqf.common.evaluation.dao.IMeasureEvalJobDao;
+import org.opencds.cqf.common.evaluation.entity.MeasureEvalJobBatchEntity;
 import org.opencds.cqf.cql.engine.fhir.searchparam.SearchParameterResolver;
 import org.opencds.cqf.cql.engine.runtime.Code;
 import org.springframework.beans.factory.annotation.Autowire;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 import ca.uhn.fhir.context.FhirContext;
@@ -37,6 +40,7 @@ import ca.uhn.fhir.rest.server.interceptor.ResponseHighlighterInterceptor;
 
 @Configuration
 @EnableTransactionManagement
+@EnableJpaRepositories(basePackageClasses = IMeasureEvalJobDao.class)
 @ComponentScan(basePackages = "org.opencds.cqf.common")
 public class FhirServerConfig {
 

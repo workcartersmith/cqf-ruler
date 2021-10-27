@@ -17,7 +17,6 @@
     <context-param>
         <param-name>contextConfigLocation</param-name>
         <param-value>
-            org.opencds.cqf.common.config.FhirServerConfig,
             org.opencds.cqf.r4.config.FhirServerConfigR4
         </param-value>
     </context-param>
