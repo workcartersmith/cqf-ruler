@@ -51,22 +51,22 @@ public class ProcessMessageProviderIT implements ResolutionUtilities {
         ourClient = ourCtx.newRestfulGenericClient(ourServerBase);
     }
 
-    @Test
-    public void testProcessMessage() throws IOException {
-
-        resolveByLocation(ourRegistry, "transaction-bundle-test.json", ourCtx);
-
-        Bundle test = (Bundle)ourCtx.newJsonParser().parseResource(stringFromResource("transaction-bundle-test.json"));
-
-        Parameters params = new Parameters();
-        params.addParameter().setName("theMessageToProcess").setResource(test);
-
-        Bundle actual = ourClient.operation().onType(Bundle.class).named("$process-message-bundle")
-                .withParameters(params)
-                .returnResourceType(Bundle.class)
-                .execute();
-
-        assertNotNull(actual);
-    }
+//    @Test
+//    public void testProcessMessage() throws IOException {
+//
+//        resolveByLocation(ourRegistry, "transaction-bundle-test.json", ourCtx);
+//
+//        Bundle test = (Bundle)ourCtx.newJsonParser().parseResource(stringFromResource("transaction-bundle-test.json"));
+//
+//        Parameters params = new Parameters();
+//        params.addParameter().setName("theMessageToProcess").setResource(test);
+//
+//        Bundle actual = ourClient.operation().onType(Bundle.class).named("$process-message-bundle")
+//                .withParameters(params)
+//                .returnResourceType(Bundle.class)
+//                .execute();
+//
+//        assertNotNull(actual);
+//    }
 
 }
